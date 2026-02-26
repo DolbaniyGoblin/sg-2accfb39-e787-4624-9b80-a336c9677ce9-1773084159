@@ -89,7 +89,7 @@ export default function BoxesPage() {
                 <div className="grid grid-cols-2 gap-3">
                    <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="destructive" variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700">
+                      <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700">
                         <AlertTriangle className="w-4 h-4 mr-2" />
                         Проблема
                       </Button>
