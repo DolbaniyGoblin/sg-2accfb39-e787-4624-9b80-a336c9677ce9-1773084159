@@ -9,6 +9,9 @@ import { Package, TrendingUp, MapPin, Truck, AlertTriangle } from "lucide-react"
 import { formatTime, cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
+import { taskService } from "@/services/taskService";
+import { deliveryService } from "@/services/deliveryService";
+import { locationService } from "@/services/locationService";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -20,61 +23,53 @@ export default function Dashboard() {
   });
   const [nextTasks, setNextTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [locationTrackingId, setLocationTrackingId] = useState<number | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchDashboardData();
+      
+      // Start location tracking when shift is on
+      if (user.is_on_shift && !locationTrackingId) {
+        const trackingId = locationService.startTracking(user.id);
+        setLocationTrackingId(trackingId);
+      }
+
+      // Subscribe to realtime task updates
+      const subscription = taskService.subscribeToTasks(user.id, (payload) => {
+        console.log("Realtime update:", payload);
+        fetchDashboardData(); // Refresh data on any change
+        
+        if (payload.eventType === "INSERT") {
+          toast.success("Новое задание добавлено!");
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+        if (locationTrackingId) {
+          locationService.stopTracking(locationTrackingId);
+        }
+      };
     } else {
       setLoading(false);
     }
   }, [user]);
 
   const fetchDashboardData = async () => {
-    // In a real app, you'd fetch this from Supabase.
-    // Simulating data for now if database is empty
+    if (!user) return;
+
     try {
-      // Fetch stats...
-      // For now, mock data
-      setStats({
-        deliveredToday: 5,
-        totalTasksToday: 12,
-        earnedToday: 2500,
-        kmToday: 14.5,
-      });
+      // Fetch real stats from Supabase
+      const statsData = await deliveryService.getTodayStats(user.id);
+      setStats(statsData);
 
       // Fetch next 3 tasks
-      setNextTasks([
-        {
-          id: "1",
-          courier_id: user?.id || "",
-          client_name: "ООО 'ТехноМир'",
-          client_phone: "+79001234567",
-          address: "ул. Ленина, 45, оф. 203",
-          latitude: 55.751244,
-          longitude: 37.618423,
-          boxes_count: 3,
-          time_slot: "morning",
-          scheduled_time: new Date().toISOString(),
-          status: "pending",
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          courier_id: user?.id || "",
-          client_name: "ИП Смирнов",
-          client_phone: "+79007654321",
-          address: "пр. Мира, 102",
-          latitude: 55.796127,
-          longitude: 37.638122,
-          boxes_count: 1,
-          time_slot: "day",
-          scheduled_time: new Date(Date.now() + 3600000).toISOString(),
-          status: "pending",
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const tasksData = await taskService.getNextTasks(user.id, 3);
+      setNextTasks(tasksData);
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching dashboard data:", error);
+      // Keep mock data as fallback
     } finally {
       setLoading(false);
     }
