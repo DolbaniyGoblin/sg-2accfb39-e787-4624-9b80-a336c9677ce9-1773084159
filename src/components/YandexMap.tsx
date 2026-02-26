@@ -21,8 +21,7 @@ export function YandexMap({ tasks, courierLocation, className, onMarkerClick }: 
     script.src = `https://api-maps.yandex.ru/2.1/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_KEY || ""}&lang=ru_RU`;
     script.async = true;
     script.onload = () => {
-      // @ts-ignore
-      setYmaps(window.ymaps);
+      setYmaps((window as any).ymaps);
       setIsLoading(false);
     };
     document.body.appendChild(script);
