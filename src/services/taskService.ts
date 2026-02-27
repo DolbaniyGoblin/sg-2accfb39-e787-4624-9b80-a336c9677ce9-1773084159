@@ -19,7 +19,7 @@ export const taskService = {
       throw error;
     }
 
-    return data || [];
+    return (data as unknown as Task[]) || [];
   },
 
   // Получить следующие 3 задачи
@@ -40,7 +40,7 @@ export const taskService = {
       throw error;
     }
 
-    return data || [];
+    return (data as unknown as Task[]) || [];
   },
 
   // Обновить статус задачи
@@ -70,7 +70,7 @@ export const taskService = {
       throw error;
     }
 
-    return data || [];
+    return (data as unknown as Task[]) || [];
   },
 
   // Подписаться на изменения задач (realtime)

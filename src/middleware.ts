@@ -1,3 +1,4 @@
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -7,26 +8,31 @@ const protectedRoutes = ["/", "/route", "/boxes", "/history", "/profile"];
 // Публичные роуты (доступны без авторизации)
 const authRoutes = ["/auth/login", "/auth/register"];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const res = NextResponse.next();
 
-  // Проверяем наличие токена в cookies
-  const token = request.cookies.get("sb-access-token")?.value;
+  // Create a Supabase client configured to use cookies
+  const supabase = createMiddlewareClient({ req: request, res });
+
+  // Refresh session if expired - required for Server Components
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const isAuthenticated = !!session;
 
   // Если пользователь НЕ авторизован
-  if (!token) {
+  if (!isAuthenticated) {
     // Если пытается попасть на защищённый роут → redirect на login
     if (protectedRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
-      // Проверяем, что мы уже не на странице логина (предотвращаем цикл)
-      if (!authRoutes.some((route) => pathname.startsWith(route))) {
-        const loginUrl = new URL("/auth/login", request.url);
-        return NextResponse.redirect(loginUrl);
-      }
+      const loginUrl = new URL("/auth/login", request.url);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
   // Если пользователь авторизован
-  if (token) {
+  if (isAuthenticated) {
     // Если пытается попасть на auth страницы → redirect на главную
     if (authRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
       const homeUrl = new URL("/", request.url);
@@ -34,7 +40,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return res;
 }
 
 export const config = {
