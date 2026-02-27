@@ -45,7 +45,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Head>
-        <title>Вход | КурьерПро PRO</title>
+        <title>Вход | Е.Д.С. Личный кабинет</title>
       </Head>
 
       <Card className="w-full max-w-md border-primary/20 shadow-lg">
@@ -55,7 +55,7 @@ export default function LoginPage() {
               <Truck className="w-10 h-10 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-primary">КурьерПро PRO</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">Е.Д.С. Личный кабинет</CardTitle>
           <CardDescription>Вход для сотрудников службы доставки</CardDescription>
         </CardHeader>
         <CardContent>

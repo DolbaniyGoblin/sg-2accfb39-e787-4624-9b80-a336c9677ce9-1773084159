@@ -38,7 +38,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Head>
-        <title>Регистрация | КурьерПро PRO</title>
+        <title>Регистрация | Е.Д.С. Личный кабинет</title>
       </Head>
 
       <Card className="w-full max-w-md border-primary/20 shadow-lg">
