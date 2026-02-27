@@ -57,6 +57,33 @@ export type Database = {
           },
         ]
       }
+      location_history: {
+        Row: {
+          courier_id: string
+          id: string
+          latitude: number
+          longitude: number
+          speed: number | null
+          timestamp: string | null
+        }
+        Insert: {
+          courier_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          speed?: number | null
+          timestamp?: string | null
+        }
+        Update: {
+          courier_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          speed?: number | null
+          timestamp?: string | null
+        }
+        Relationships: []
+      }
       locations: {
         Row: {
           courier_id: string | null
@@ -113,6 +140,36 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      route_history: {
+        Row: {
+          courier_id: string
+          created_at: string | null
+          estimated_time: number
+          id: string
+          is_best: boolean | null
+          route_order: Json
+          total_distance: number
+        }
+        Insert: {
+          courier_id: string
+          created_at?: string | null
+          estimated_time: number
+          id?: string
+          is_best?: boolean | null
+          route_order: Json
+          total_distance: number
+        }
+        Update: {
+          courier_id?: string
+          created_at?: string | null
+          estimated_time?: number
+          id?: string
+          is_best?: boolean | null
+          route_order?: Json
+          total_distance?: number
         }
         Relationships: []
       }

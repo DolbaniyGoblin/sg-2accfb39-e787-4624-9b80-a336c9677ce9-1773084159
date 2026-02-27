@@ -51,7 +51,11 @@ export const routeService = {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        route_order: data.route_order as unknown as string[]
+      };
     } catch (error) {
       console.error("Failed to save route:", error);
       return null;
@@ -71,7 +75,13 @@ export const routeService = {
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      
+      if (!data) return null;
+      
+      return {
+        ...data,
+        route_order: data.route_order as unknown as string[]
+      };
     } catch (error) {
       console.error("Failed to get best route:", error);
       return null;
@@ -89,7 +99,11 @@ export const routeService = {
         .limit(limit);
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(item => ({
+        ...item,
+        route_order: item.route_order as unknown as string[]
+      }));
     } catch (error) {
       console.error("Failed to get route history:", error);
       return [];
