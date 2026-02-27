@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Navigation, 
   MapPin, 
@@ -20,7 +21,10 @@ import {
   Save,
   History,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Settings,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { taskService } from "@/services/taskService";
 import { locationService } from "@/services/locationService";
@@ -109,6 +113,12 @@ export default function MapPage() {
   const [etas, setEtas] = useState<Map<string, Date>>(new Map());
   const [traceLine, setTraceLine] = useState<any>(null);
   const [showTrace, setShowTrace] = useState(true);
+  const [hasNotifiedProximity, setHasNotifiedProximity] = useState<Set<string>>(new Set());
+
+  // Следующая активная задача
+  const nextTask = useMemo(() => {
+    return orderedTasks.find(t => t.status !== "delivered");
+  }, [orderedTasks]);
 
   // Статистика
   const stats = useMemo(() => {
@@ -187,21 +197,29 @@ export default function MapPage() {
           const { latitude, longitude, speed } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           
-          // Сохраняем в историю каждые 30 секунд (примерно)
-          // В реальном приложении лучше делать проверку по времени/расстоянию
+          // Сохраняем в историю
           await locationService.updateLocation(user.id, latitude, longitude);
-          
-          // Добавляем точку в историю для следа
           await routeService.addLocationToHistory(user.id, latitude, longitude, speed || 0);
           
           if (map) loadTrace();
+
+          // Проверка близости к следующей точке
+          if (nextTask && nextTask.latitude && nextTask.longitude) {
+            const distance = calculateDistance(latitude, longitude, nextTask.latitude, nextTask.longitude);
+            if (distance < 0.2 && !hasNotifiedProximity.has(nextTask.id)) {
+              toast.success(`🎯 Вы приближаетесь к точке доставки: ${nextTask.address}`, {
+                duration: 5000,
+              });
+              setHasNotifiedProximity(prev => new Set(prev).add(nextTask.id));
+            }
+          }
         },
         (error) => console.error("Geolocation error:", error),
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
       return () => navigator.geolocation.clearWatch(watchId);
     }
-  }, [user?.id, map]);
+  }, [user?.id, map, nextTask, hasNotifiedProximity]);
 
   // Инициализация карты
   useEffect(() => {
@@ -227,7 +245,7 @@ export default function MapPage() {
 
     const coordinates = history.map(h => [h.latitude, h.longitude]);
     const polyline = new window.ymaps.Polyline(coordinates, {}, {
-      strokeColor: "#8b5cf6", // Фиолетовый
+      strokeColor: "#8b5cf6",
       strokeWidth: 3,
       strokeOpacity: 0.5,
       strokeStyle: "dash"
@@ -329,7 +347,7 @@ export default function MapPage() {
       user.id, 
       taskIds, 
       stats.totalDistance, 
-      0, // Time calc requires complexity
+      0,
       true
     );
     toast.success("Маршрут сохранён как лучший!");
@@ -346,13 +364,22 @@ export default function MapPage() {
       if (task) newOrder.push(task);
     });
     
-    // Добавляем новые задачи, которых не было в сохранении
     tasks.forEach(task => {
       if (!best.route_order.includes(task.id)) newOrder.push(task);
     });
 
     setOrderedTasks(newOrder);
     toast.success("Лучший маршрут загружен!");
+  };
+
+  const handleNavigateToNext = () => {
+    if (!nextTask || !nextTask.latitude || !nextTask.longitude) {
+      return toast.error("Нет следующей точки доставки");
+    }
+    
+    const yandexMapsUrl = `https://yandex.ru/maps/?rtext=${userLocation?.lat},${userLocation?.lng}~${nextTask.latitude},${nextTask.longitude}&rtt=auto`;
+    window.open(yandexMapsUrl, '_blank');
+    toast.success("Открываю навигацию в Яндекс.Картах");
   };
 
   // Drag & Drop
@@ -376,46 +403,149 @@ export default function MapPage() {
       <div className="space-y-4 p-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">🗺️ Карта</h1>
-            <p className="text-muted-foreground text-sm">Управление маршрутом</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={() => setShowTrace(!showTrace)} title="Показать след">
-              <History className={`h-5 w-5 ${showTrace ? 'text-primary' : 'text-muted-foreground'}`} />
-            </Button>
-            <Button variant="outline" size="icon" onClick={handleSaveRoute} title="Сохранить маршрут">
-              <Save className="h-5 w-5" />
-            </Button>
+            <h1 className="text-3xl font-bold">🗺️ Карта доставок</h1>
+            <p className="text-muted-foreground text-sm">Построение и оптимизация маршрута</p>
           </div>
         </div>
+
+        {/* Предупреждения */}
+        {!userLocation && (
+          <Alert>
+            <MapPin className="h-4 w-4" />
+            <AlertDescription>
+              Разрешите доступ к геолокации для построения маршрута
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {tasks.length === 0 && (
+          <Alert>
+            <Package className="h-4 w-4" />
+            <AlertDescription>
+              На сегодня нет заданий. Проверьте вкладку "Маршрутный лист"
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Следующая доставка */}
+        {nextTask && (
+          <Card className="border-2 border-primary">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Navigation className="h-5 w-5 text-primary" />
+                Следующая доставка
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
+                <div className="flex-1">
+                  <p className="font-medium">{nextTask.address}</p>
+                  <p className="text-sm text-muted-foreground">
+                    ⏰ {formatTime(nextTask.scheduled_time)} • 📦 {nextTask.boxes_count} кор.
+                  </p>
+                  {etas.get(nextTask.id) && (
+                    <p className="text-sm text-green-600 font-medium mt-1">
+                      🏁 ETA: {formatTime(etas.get(nextTask.id)!.toISOString())}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Button 
+                onClick={handleNavigateToNext} 
+                className="w-full" 
+                size="lg"
+                disabled={!userLocation}
+              >
+                <Navigation className="mr-2 h-5 w-5" />
+                Построить маршрут в Яндекс.Картах
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Статистика */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card className="p-3">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-blue-500" />
-              <span className="text-sm text-muted-foreground">Дистанция</span>
+            <div className="flex items-center gap-2 mb-1">
+              <RouteIcon className="h-4 w-4 text-blue-500" />
+              <span className="text-xs text-muted-foreground">Дистанция</span>
             </div>
             <p className="text-xl font-bold">{stats.totalDistance.toFixed(1)} км</p>
           </Card>
+          
           <Card className="p-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-muted-foreground">Готово</span>
+              <span className="text-xs text-muted-foreground">Готово</span>
             </div>
             <p className="text-xl font-bold">{stats.delivered} / {stats.total}</p>
           </Card>
+
+          <Card className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="h-4 w-4 text-orange-500" />
+              <span className="text-xs text-muted-foreground">В пути</span>
+            </div>
+            <p className="text-xl font-bold">{stats.inProgress}</p>
+          </Card>
+
+          <Card className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Package className="h-4 w-4 text-red-500" />
+              <span className="text-xs text-muted-foreground">Ожидает</span>
+            </div>
+            <p className="text-xl font-bold">{stats.pending}</p>
+          </Card>
         </div>
 
-        {/* Управление */}
-        <div className="grid grid-cols-2 gap-2">
-          <Button onClick={handleOptimize} disabled={isOptimizing} className="w-full">
-            <Zap className="mr-2 h-4 w-4" /> Оптимизировать
-          </Button>
-          <Button onClick={handleLoadBestRoute} variant="outline" className="w-full">
-            <TrendingUp className="mr-2 h-4 w-4" /> Лучший
-          </Button>
-        </div>
+        {/* Управление маршрутом */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Управление маршрутом
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-2">
+            <Button 
+              onClick={handleOptimize} 
+              disabled={isOptimizing || !userLocation}
+              variant="default"
+              className="w-full"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              {isOptimizing ? "Оптимизация..." : "Оптимизировать"}
+            </Button>
+            
+            <Button 
+              onClick={handleLoadBestRoute} 
+              variant="outline"
+              className="w-full"
+            >
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Лучший
+            </Button>
+
+            <Button 
+              onClick={handleSaveRoute}
+              variant="outline"
+              className="w-full"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Сохранить
+            </Button>
+
+            <Button 
+              onClick={() => setShowTrace(!showTrace)}
+              variant="outline"
+              className="w-full"
+            >
+              {showTrace ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
+              {showTrace ? "Скрыть след" : "Показать след"}
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Карта */}
@@ -423,12 +553,16 @@ export default function MapPage() {
             <div id="map-container" className="w-full h-[500px] bg-muted" />
           </Card>
 
-          {/* Список */}
+          {/* Список точек */}
           <Card className="h-[500px] flex flex-col">
             <CardHeader className="py-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4" /> Порядок доставки
+                <ArrowUpDown className="h-4 w-4" />
+                Порядок доставки ({orderedTasks.length})
               </CardTitle>
+              <CardDescription className="text-xs">
+                Перетаскивайте для изменения порядка
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
               {orderedTasks.map((task, index) => {
@@ -443,7 +577,9 @@ export default function MapPage() {
                     onDragOver={handleDragOver}
                     onDrop={() => handleDrop(index)}
                     className={`p-3 rounded-lg border text-sm transition-all ${
-                      task.status === "delivered" ? "opacity-50 bg-muted" : "bg-card hover:border-primary cursor-move"
+                      task.status === "delivered" 
+                        ? "opacity-50 bg-muted" 
+                        : "bg-card hover:border-primary cursor-move hover:shadow-md"
                     } ${selectedTask?.id === task.id ? "ring-2 ring-primary" : ""}`}
                     onClick={() => {
                       setSelectedTask(task);
@@ -452,18 +588,20 @@ export default function MapPage() {
                   >
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-bold flex items-center gap-2">
-                        <span className="bg-primary text-primary-foreground w-5 h-5 rounded-full flex items-center justify-center text-xs">
+                        <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center text-xs">
                           {index + 1}
                         </span>
                         {formatTime(task.scheduled_time)}
                       </span>
-                      <Badge variant="outline">{task.boxes_count} кор.</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {task.boxes_count} кор.
+                      </Badge>
                     </div>
                     
-                    <p className="truncate mb-1">{task.address}</p>
+                    <p className="truncate mb-1 text-xs">{task.address}</p>
                     
                     {eta && task.status !== "delivered" && (
-                      <div className={`flex items-center gap-1 text-xs ${isLate ? "text-red-500" : "text-green-600"}`}>
+                      <div className={`flex items-center gap-1 text-xs ${isLate ? "text-red-500 font-medium" : "text-green-600"}`}>
                         {isLate ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
                         <span>ETA: {formatTime(eta.toISOString())}</span>
                       </div>
