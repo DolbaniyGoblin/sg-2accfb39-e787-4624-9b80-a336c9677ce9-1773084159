@@ -22,11 +22,20 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      console.log("Starting sign in process...");
       await signIn(email, password);
+      console.log("Sign in completed, attempting redirect...");
+      
       toast.success("Вход выполнен успешно");
-      router.push("/");
+      
+      // Небольшая задержка для синхронизации сессии
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log("Redirecting to home page...");
+      await router.push("/");
+      console.log("Redirect completed");
     } catch (error: any) {
-      console.error(error);
+      console.error("Login error:", error);
       toast.error(error.message || "Ошибка входа");
     } finally {
       setIsLoading(false);
