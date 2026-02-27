@@ -36,17 +36,14 @@ export default function Dashboard() {
       }
 
       // Subscribe to realtime task updates
-      const subscription = taskService.subscribeToTasks(user.id, (payload) => {
-        console.log("Realtime update:", payload);
+      const unsubscribe = taskService.subscribeToTasks(user.id, () => {
+        console.log("Realtime update received");
         fetchDashboardData(); // Refresh data on any change
-        
-        if (payload.eventType === "INSERT") {
-          toast.success("Новое задание добавлено!");
-        }
+        toast.info("Данные обновлены");
       });
 
       return () => {
-        subscription.unsubscribe();
+        unsubscribe();
         if (locationTrackingId) {
           locationService.stopTracking(locationTrackingId);
         }
