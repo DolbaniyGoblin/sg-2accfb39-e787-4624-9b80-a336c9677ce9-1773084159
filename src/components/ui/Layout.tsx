@@ -15,7 +15,7 @@ interface LayoutProps {
   requireAuth?: boolean;
 }
 
-export function Layout({ children, title = "КурьерПро PRO", requireAuth = true }: LayoutProps) {
+export function Layout({ children, title = "Е.Д.С. Личный кабинет", requireAuth = true }: LayoutProps) {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
