@@ -3,9 +3,11 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { Toaster } from "sonner";
-import { Loader2, LogOut, User, Map, Package, History, Home } from "lucide-react";
+import { Loader2, LogOut, User, Map, History, Home, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 interface LayoutProps {
   children: ReactNode;
@@ -32,8 +34,7 @@ export function Layout({ children, title = "КурьерПро PRO", requireAuth
 
   const navItems = [
     { icon: Home, label: "Дашборд", href: "/" },
-    { icon: Map, label: "Маршрут", href: "/route" },
-    { icon: Package, label: "Коробки", href: "/boxes" },
+    { icon: Map, label: "Коробки", href: "/boxes" },
     { icon: History, label: "История", href: "/history" },
     { icon: User, label: "Профиль", href: "/profile" },
   ];

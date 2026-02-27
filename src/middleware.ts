@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
   const user = session?.user;
 
   // Защищённые роуты (требуют авторизации)
-  const protectedRoutes = ["/", "/route", "/boxes", "/history", "/profile"];
+  const protectedRoutes = ["/", "/route", "/boxes", "/history", "/profile", "/map"];
   
   // Публичные роуты (доступны без авторизации)
   const authRoutes = ["/auth/login", "/auth/register"];
