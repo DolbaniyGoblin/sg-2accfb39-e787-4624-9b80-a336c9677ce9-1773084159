@@ -16,16 +16,19 @@ export function middleware(request: NextRequest) {
   // Если пользователь НЕ авторизован
   if (!token) {
     // Если пытается попасть на защищённый роут → redirect на login
-    if (protectedRoutes.some((route) => pathname.startsWith(route))) {
-      const loginUrl = new URL("/auth/login", request.url);
-      return NextResponse.redirect(loginUrl);
+    if (protectedRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
+      // Проверяем, что мы уже не на странице логина (предотвращаем цикл)
+      if (!authRoutes.some((route) => pathname.startsWith(route))) {
+        const loginUrl = new URL("/auth/login", request.url);
+        return NextResponse.redirect(loginUrl);
+      }
     }
   }
 
   // Если пользователь авторизован
   if (token) {
     // Если пытается попасть на auth страницы → redirect на главную
-    if (authRoutes.some((route) => pathname.startsWith(route))) {
+    if (authRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
       const homeUrl = new URL("/", request.url);
       return NextResponse.redirect(homeUrl);
     }

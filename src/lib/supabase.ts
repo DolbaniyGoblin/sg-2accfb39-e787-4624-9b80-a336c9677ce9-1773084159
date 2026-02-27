@@ -1,70 +1,29 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Fallback values to prevent build/runtime crashes before Supabase is connected
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder";
+const isBrowser = typeof window !== "undefined";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Получаем значения из env
+let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export type Database = {
-  public: {
-    Tables: {
-      users: {
-        Row: {
-          id: string;
-          email: string;
-          full_name: string;
-          phone: string;
-          photo_url: string | null;
-          rating: number;
-          experience_months: number;
-          is_on_shift: boolean;
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["users"]["Row"], "id" | "created_at">;
-        Update: Partial<Database["public"]["Tables"]["users"]["Insert"]>;
-      };
-      tasks: {
-        Row: {
-          id: string;
-          courier_id: string;
-          client_name: string;
-          client_phone: string;
-          address: string;
-          latitude: number;
-          longitude: number;
-          boxes_count: number;
-          time_slot: "morning" | "day" | "evening";
-          scheduled_time: string;
-          status: "pending" | "in_progress" | "on_location" | "delivered" | "problem";
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["tasks"]["Row"], "id" | "created_at">;
-        Update: Partial<Database["public"]["Tables"]["tasks"]["Insert"]>;
-      };
-      deliveries: {
-        Row: {
-          id: string;
-          task_id: string;
-          courier_id: string;
-          photo_url: string | null;
-          notes: string | null;
-          delivered_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["deliveries"]["Row"], "id">;
-        Update: Partial<Database["public"]["Tables"]["deliveries"]["Insert"]>;
-      };
-      locations: {
-        Row: {
-          id: string;
-          courier_id: string;
-          latitude: number;
-          longitude: number;
-          updated_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["locations"]["Row"], "id">;
-        Update: Partial<Database["public"]["Tables"]["locations"]["Insert"]>;
-      };
-    };
-  };
+// Проверка на валидность URL и наличие ключей
+// Если URL не начинается с http/https или содержит "your_supabase_url" (заглушка), считаем его невалидным
+const isValidUrl = (url: string | undefined) => {
+  return url && (url.startsWith("http://") || url.startsWith("https://")) && !url.includes("your_supabase_url");
 };
+
+// Если конфиг невалидный, используем безопасные заглушки, чтобы приложение не падало
+if (!isValidUrl(supabaseUrl) || !supabaseAnonKey || supabaseAnonKey.includes("your_supabase_anon_key")) {
+  if (isBrowser) {
+    console.warn(
+      "%c⚠️ Supabase Config Missing or Invalid",
+      "color: orange; font-size: 14px; font-weight: bold;",
+      "\nUsing placeholder values to prevent crash. Please connect Supabase in project settings."
+    );
+  }
+  // Используем валидный URL-заглушку, чтобы createClient не падал
+  supabaseUrl = "https://placeholder.supabase.co";
+  supabaseAnonKey = "placeholder-anon-key";
+}
+
+export const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
