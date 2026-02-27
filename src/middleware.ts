@@ -54,7 +54,8 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
 
   // Защищённые роуты (требуют авторизации)
   const protectedRoutes = ["/", "/route", "/boxes", "/history", "/profile"];
