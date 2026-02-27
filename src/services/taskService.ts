@@ -74,8 +74,8 @@ export const taskService = {
   },
 
   // Подписаться на изменения задач (realtime)
-  subscribeToTasks(courierId: string, callback: (payload: any) => void) {
-    const subscription = supabase
+  subscribeToTasks(courierId: string, onUpdate: () => void) {
+    const channel = supabase
       .channel("tasks-changes")
       .on(
         "postgres_changes",
@@ -85,10 +85,14 @@ export const taskService = {
           table: "tasks",
           filter: `courier_id=eq.${courierId}`,
         },
-        callback
+        () => {
+          onUpdate();
+        }
       )
       .subscribe();
 
-    return subscription;
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 };

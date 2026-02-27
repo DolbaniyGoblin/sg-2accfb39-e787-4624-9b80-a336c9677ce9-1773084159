@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Layout } from "@/components/ui/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,17 @@ export default function MapPage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
 
+  // Функция загрузки задач
+  const loadTasks = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const data = await taskService.getTodayTasks(user.id);
+      setTasks(data.filter(t => t.status !== "delivered")); // Не показываем доставленные
+    } catch (error) {
+      console.error("Failed to load tasks", error);
+    }
+  }, [user?.id]);
+
   // Загружаем Яндекс.Карты
   useEffect(() => {
     const script = document.createElement("script");
@@ -36,20 +47,22 @@ export default function MapPage() {
     document.head.appendChild(script);
 
     return () => {
-      document.head.removeChild(script);
+      // document.head.removeChild(script); // Оставляем скрипт, чтобы не ломать навигацию
     };
   }, []);
 
-  // Получаем задания
+  // Первичная загрузка и подписка
   useEffect(() => {
     if (!user?.id) return;
 
-    const unsubscribe = taskService.subscribeToTasks(user.id, (updatedTasks) => {
-      setTasks(updatedTasks.filter(t => t.status !== "completed"));
+    loadTasks();
+
+    const unsubscribe = taskService.subscribeToTasks(user.id, () => {
+      loadTasks();
     });
 
     return () => unsubscribe();
-  }, [user?.id]);
+  }, [user?.id, loadTasks]);
 
   // Отслеживаем геолокацию курьера
   useEffect(() => {
@@ -61,7 +74,7 @@ export default function MapPage() {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
 
-          // Обновляем местоположение в базе каждые 30 секунд
+          // Обновляем местоположение в базе
           await locationService.updateLocation(user.id, latitude, longitude);
         },
         (error) => console.error("Geolocation error:", error),
@@ -102,7 +115,7 @@ export default function MapPage() {
         [userLocation.lat, userLocation.lng],
         {
           balloonContent: "<strong>Вы здесь</strong>",
-          iconCaption: "Моё местоположение"
+          iconCaption: "Я"
         },
         {
           preset: "islands#blueCircleDotIcon",
@@ -114,21 +127,23 @@ export default function MapPage() {
 
     // Добавляем метки доставок
     tasks.forEach((task, index) => {
-      if (!task.location?.lat || !task.location?.lng) return;
+      if (!task.latitude || !task.longitude) return;
+
+      const timeString = new Date(task.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const placemark = new window.ymaps.Placemark(
-        [task.location.lat, task.location.lng],
+        [task.latitude, task.longitude],
         {
           balloonContent: `
             <div style="padding: 10px;">
               <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">${task.address}</h3>
-              <p style="margin: 4px 0; font-size: 12px;">📦 ${task.boxes} коробок</p>
-              <p style="margin: 4px 0; font-size: 12px;">⏰ ${task.time}</p>
-              <p style="margin: 4px 0; font-size: 12px;">👤 ${task.client}</p>
-              <p style="margin: 4px 0; font-size: 12px;">📞 ${task.phone}</p>
+              <p style="margin: 4px 0; font-size: 12px;">📦 ${task.boxes_count} коробок</p>
+              <p style="margin: 4px 0; font-size: 12px;">⏰ ${timeString}</p>
+              <p style="margin: 4px 0; font-size: 12px;">👤 ${task.client_name}</p>
+              <p style="margin: 4px 0; font-size: 12px;">📞 ${task.client_phone}</p>
             </div>
           `,
-          iconCaption: `${index + 1}. ${task.boxes} коробок`
+          iconCaption: `${index + 1}. ${task.boxes_count} кор.`
         },
         {
           preset: task.status === "in_progress" ? "islands#orangeCircleIcon" : "islands#redCircleIcon",
@@ -145,32 +160,22 @@ export default function MapPage() {
   }, [map, tasks, userLocation]);
 
   const buildRoute = async (task: Task) => {
-    if (!map || !userLocation || !task.location?.lat || !task.location?.lng) return;
+    if (!map || !userLocation || !task.latitude || !task.longitude) return;
 
-    // Очищаем предыдущие маршруты
-    map.geoObjects.removeAll();
-
-    // Восстанавливаем метки
-    const userPlacemark = new window.ymaps.Placemark(
-      [userLocation.lat, userLocation.lng],
-      { iconCaption: "Вы" },
-      { preset: "islands#blueCircleDotIcon" }
-    );
-    map.geoObjects.add(userPlacemark);
-
-    const taskPlacemark = new window.ymaps.Placemark(
-      [task.location.lat, task.location.lng],
-      { iconCaption: task.address },
-      { preset: "islands#redCircleIcon" }
-    );
-    map.geoObjects.add(taskPlacemark);
+    // Очищаем предыдущие маршруты (но оставляем метки)
+    // В реальном проекте лучше использовать отдельную коллекцию для маршрутов
+    map.geoObjects.each((obj: any) => {
+      if (obj.geometry && obj.geometry.getType() === "LineString") { // упрощенная проверка
+         map.geoObjects.remove(obj);
+      }
+    });
 
     // Строим маршрут
     const multiRoute = new window.ymaps.multiRouter.MultiRoute(
       {
         referencePoints: [
           [userLocation.lat, userLocation.lng],
-          [task.location.lat, task.location.lng]
+          [task.latitude, task.longitude]
         ],
         params: { routingMode: "auto" }
       },
@@ -186,9 +191,13 @@ export default function MapPage() {
     map.geoObjects.add(multiRoute);
   };
 
+  const formatTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-4">
         <div>
           <h1 className="text-3xl font-bold">Карта доставок</h1>
           <p className="text-muted-foreground">Все точки маршрута на карте</p>
@@ -196,9 +205,9 @@ export default function MapPage() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Карта */}
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 overflow-hidden">
             <CardContent className="p-0">
-              <div id="map-container" className="w-full h-[600px] rounded-lg" />
+              <div id="map-container" className="w-full h-[500px] lg:h-[600px] bg-muted" />
             </CardContent>
           </Card>
 
@@ -216,7 +225,7 @@ export default function MapPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{selectedTask.time}</span>
+                      <span className="font-medium">{formatTime(selectedTask.scheduled_time)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -224,17 +233,17 @@ export default function MapPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Package className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedTask.boxes} коробок</span>
+                      <span>{selectedTask.boxes_count} коробок</span>
                     </div>
                   </div>
 
                   <div className="space-y-2 pt-4 border-t">
                     <p className="text-sm font-medium">Клиент</p>
-                    <p className="text-sm text-muted-foreground">{selectedTask.client}</p>
+                    <p className="text-sm text-muted-foreground">{selectedTask.client_name}</p>
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <a href={`tel:${selectedTask.phone}`} className="text-primary hover:underline">
-                        {selectedTask.phone}
+                      <a href={`tel:${selectedTask.client_phone}`} className="text-primary hover:underline">
+                        {selectedTask.client_phone}
                       </a>
                     </div>
                   </div>
@@ -263,18 +272,18 @@ export default function MapPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Нажмите на метку на карте, чтобы увидеть информацию о доставке</p>
+                  <p>Нажмите на метку на карте, чтобы увидеть информацию</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Список активных доставок */}
-        <Card>
+        {/* Список активных доставок (для мобильных) */}
+        <Card className="lg:hidden">
           <CardHeader>
-            <CardTitle>Активные доставки</CardTitle>
-            <CardDescription>Всего точек: {tasks.length}</CardDescription>
+            <CardTitle>Список точек</CardTitle>
+            <CardDescription>Всего: {tasks.length}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -283,8 +292,9 @@ export default function MapPage() {
                   key={task.id}
                   onClick={() => {
                     setSelectedTask(task);
-                    if (task.location?.lat && task.location?.lng && map) {
-                      map.setCenter([task.location.lat, task.location.lng], 15, {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    if (task.latitude && task.longitude && map) {
+                      map.setCenter([task.latitude, task.longitude], 15, {
                         duration: 300
                       });
                     }
@@ -296,19 +306,12 @@ export default function MapPage() {
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium">{task.address}</p>
-                      <p className="text-sm text-muted-foreground">{task.time} • {task.boxes} коробок</p>
+                      <p className="font-medium truncate max-w-[180px]">{task.address}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatTime(task.scheduled_time)} • {task.boxes_count} шт.
+                      </p>
                     </div>
                   </div>
-                  <Badge variant={
-                    task.status === "pending" ? "secondary" :
-                    task.status === "in_progress" ? "default" :
-                    "outline"
-                  }>
-                    {task.status === "pending" ? "Ожидает" :
-                     task.status === "in_progress" ? "В пути" :
-                     "На месте"}
-                  </Badge>
                 </div>
               ))}
             </div>
