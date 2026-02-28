@@ -72,14 +72,14 @@ export const dispatcherService = {
     const { data: locations } = await supabase
       .from("locations")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("updated_at", { ascending: false });
 
     const couriersWithStats: CourierWithStats[] = couriers.map((courier) => {
       const activeCount =
         activeTasks?.filter((t) => t.courier_id === courier.id).length || 0;
       const completedCount =
         completedTasks?.filter((t) => t.courier_id === courier.id).length || 0;
-      const location = locations?.find((l) => l.user_id === courier.id);
+      const location = locations?.find((l) => l.courier_id === courier.id);
 
       return {
         ...courier,
@@ -87,8 +87,8 @@ export const dispatcherService = {
         completed_today: completedCount,
         current_location: location
           ? {
-              latitude: location.latitude,
-              longitude: location.longitude,
+              latitude: location.latitude!,
+              longitude: location.longitude!,
             }
           : undefined,
       };
@@ -119,8 +119,8 @@ export const dispatcherService = {
         distance_to_point: calculateDistance(
           courier.current_location!.latitude,
           courier.current_location!.longitude,
-          point.latitude,
-          point.longitude
+          point.latitude!,
+          point.longitude!
         ),
       }))
       .sort((a, b) => {
@@ -145,7 +145,7 @@ export const dispatcherService = {
     if (taskError || !task) throw taskError;
 
     const nearestCourier = await this.findNearestCourier(
-      task.delivery_point_id
+      task.delivery_point_id!
     );
 
     if (!nearestCourier) {
@@ -178,16 +178,16 @@ export const dispatcherService = {
         async () => {
           const { data } = await supabase
             .from("locations")
-            .select("*, users(*)")
-            .order("created_at", { ascending: false });
+            .select("*, users!locations_courier_id_fkey(*)")
+            .order("updated_at", { ascending: false });
 
           if (data) {
             const locations: CourierLocation[] = data.map((loc) => ({
-              courier_id: loc.user_id,
-              latitude: loc.latitude,
-              longitude: loc.longitude,
-              updated_at: loc.created_at,
-              courier: loc.users as User,
+              courier_id: loc.courier_id!,
+              latitude: loc.latitude!,
+              longitude: loc.longitude!,
+              updated_at: loc.updated_at!,
+              courier: loc.users as unknown as User,
             }));
             callback(locations);
           }
@@ -254,7 +254,7 @@ export const dispatcherService = {
 
     const { data: tasks } = await supabase
       .from("tasks")
-      .select("*, users(*)")
+      .select("*, users!tasks_courier_id_fkey(*)")
       .eq("status", "completed")
       .gte("completed_at", startDate.toISOString());
 
@@ -265,7 +265,7 @@ export const dispatcherService = {
 
         if (!acc[courierId]) {
           acc[courierId] = {
-            courier: task.users as User,
+            courier: task.users as unknown as User,
             completed: 0,
             boxes: 0,
           };

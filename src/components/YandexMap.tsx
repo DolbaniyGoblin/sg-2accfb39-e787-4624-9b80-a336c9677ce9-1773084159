@@ -2,14 +2,34 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Task, CourierLocation } from "@/types";
 
-interface YandexMapProps {
-  tasks: Task[];
-  courierLocation?: CourierLocation;
-  className?: string;
-  onMarkerClick?: (task: Task) => void;
+interface DeliveryPoint {
+  id: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  status?: string;
+  boxes_count?: number;
 }
 
-export function YandexMap({ tasks, courierLocation, className, onMarkerClick }: YandexMapProps) {
+interface YandexMapProps {
+  tasks?: Task[];
+  deliveryPoints?: DeliveryPoint[];
+  courierLocation?: CourierLocation;
+  currentLocation?: { latitude: number; longitude: number };
+  className?: string;
+  showRoute?: boolean;
+  onMarkerClick?: (point: any) => void;
+}
+
+export function YandexMap({ 
+  tasks = [], 
+  deliveryPoints = [], 
+  courierLocation, 
+  currentLocation,
+  className, 
+  showRoute = true,
+  onMarkerClick 
+}: YandexMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [ymaps, setYmaps] = useState<any>(null);
@@ -45,18 +65,18 @@ export function YandexMap({ tasks, courierLocation, className, onMarkerClick }: 
     });
   }, [ymaps, mapRef]);
 
-  // Update markers when tasks change
+  // Update markers when tasks/points change
   useEffect(() => {
     if (!mapInstance || !ymaps) return;
 
     mapInstance.geoObjects.removeAll();
 
-    // Courier marker
+    // Courier marker (legacy prop)
     if (courierLocation) {
       const courierPlacemark = new ymaps.Placemark(
         [courierLocation.latitude, courierLocation.longitude],
         {
-          hintContent: "Я здесь",
+          hintContent: "Курьер",
         },
         {
           preset: "islands#blueCircleDotIcon",
@@ -65,27 +85,98 @@ export function YandexMap({ tasks, courierLocation, className, onMarkerClick }: 
       mapInstance.geoObjects.add(courierPlacemark);
     }
 
-    // Task markers
-    tasks.forEach((task) => {
-      const placemark = new ymaps.Placemark(
-        [task.latitude, task.longitude],
+    // Current location marker (generic prop)
+    if (currentLocation) {
+      const currentPlacemark = new ymaps.Placemark(
+        [currentLocation.latitude, currentLocation.longitude],
         {
-          balloonContentHeader: task.client_name,
-          balloonContentBody: `${task.address}<br/>Коробок: ${task.boxes_count}`,
-          balloonContentFooter: task.time_slot,
+          hintContent: "Текущая позиция",
         },
         {
-          preset: task.status === "delivered" ? "islands#greenIcon" : "islands#redIcon",
+          preset: "islands#blueCircleDotIcon",
         }
       );
+      mapInstance.geoObjects.add(currentPlacemark);
+    }
 
-      placemark.events.add("click", () => {
-        if (onMarkerClick) onMarkerClick(task);
+    // Task markers (Courier view)
+    if (tasks.length > 0) {
+      tasks.forEach((task) => {
+        const placemark = new ymaps.Placemark(
+          [task.latitude, task.longitude],
+          {
+            balloonContentHeader: task.client_name,
+            balloonContentBody: `${task.address}<br/>Коробок: ${task.boxes_count}`,
+            balloonContentFooter: task.time_slot,
+          },
+          {
+            preset: task.status === "delivered" ? "islands#greenIcon" : "islands#redIcon",
+          }
+        );
+
+        placemark.events.add("click", () => {
+          if (onMarkerClick) onMarkerClick(task);
+        });
+
+        mapInstance.geoObjects.add(placemark);
       });
 
-      mapInstance.geoObjects.add(placemark);
-    });
-  }, [mapInstance, ymaps, tasks, courierLocation]);
+      // Build route if enabled
+      if (showRoute && tasks.length > 0) {
+        const points = tasks.map(t => [t.latitude, t.longitude]);
+        if (courierLocation) {
+          points.unshift([courierLocation.latitude, courierLocation.longitude]);
+        }
+
+        const multiRoute = new ymaps.multiRouter.MultiRoute({
+          referencePoints: points,
+          params: {
+            routingMode: 'auto'
+          }
+        }, {
+          boundsAutoApply: true
+        });
+
+        mapInstance.geoObjects.add(multiRoute);
+      }
+    }
+
+    // Delivery points / Couriers markers (Dispatcher view)
+    if (deliveryPoints.length > 0) {
+      deliveryPoints.forEach((point) => {
+        let preset = "islands#blueIcon";
+        if (point.status === "in_progress") preset = "islands#redIcon"; // Busy
+        if (point.status === "completed") preset = "islands#greenIcon"; // Free/Done
+        if (point.status === "pending") preset = "islands#grayIcon"; // Offline/Unknown
+
+        const placemark = new ymaps.Placemark(
+          [point.latitude, point.longitude],
+          {
+            balloonContentHeader: point.address, // Courier name or Address
+            balloonContentBody: `Статус: ${point.status}<br/>Коробок: ${point.boxes_count || 0}`,
+          },
+          {
+            preset: preset,
+          }
+        );
+
+        placemark.events.add("click", () => {
+          if (onMarkerClick) onMarkerClick(point);
+        });
+
+        mapInstance.geoObjects.add(placemark);
+      });
+      
+      // Auto-fit bounds
+      if (deliveryPoints.length > 0) {
+         mapInstance.setBounds(mapInstance.geoObjects.getBounds(), {
+            checkZoomRange: true,
+            zoomMargin: 50
+        });
+      }
+    }
+
+  }, [mapInstance, ymaps, tasks, deliveryPoints, courierLocation, currentLocation, showRoute]);
 
   return (
     <div className={`relative w-full h-full ${className}`}>
