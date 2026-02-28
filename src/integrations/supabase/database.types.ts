@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -56,6 +56,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      delivery_points: {
+        Row: {
+          address: string
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address: string
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       location_history: {
         Row: {
@@ -181,9 +223,13 @@ export type Database = {
           client_phone: string | null
           courier_id: string | null
           created_at: string | null
+          created_by: string | null
+          delivery_point_id: string | null
           id: string
           latitude: number | null
           longitude: number | null
+          notes: string | null
+          priority: number | null
           scheduled_time: string | null
           status: string | null
           time_slot: string | null
@@ -195,9 +241,13 @@ export type Database = {
           client_phone?: string | null
           courier_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          delivery_point_id?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
+          notes?: string | null
+          priority?: number | null
           scheduled_time?: string | null
           status?: string | null
           time_slot?: string | null
@@ -209,9 +259,13 @@ export type Database = {
           client_phone?: string | null
           courier_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          delivery_point_id?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
+          notes?: string | null
+          priority?: number | null
           scheduled_time?: string | null
           status?: string | null
           time_slot?: string | null
@@ -222,6 +276,13 @@ export type Database = {
             columns: ["courier_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_delivery_point_id_fkey"
+            columns: ["delivery_point_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_points"
             referencedColumns: ["id"]
           },
         ]
@@ -237,6 +298,7 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           rating: number | null
+          role: string | null
         }
         Insert: {
           created_at?: string | null
@@ -248,6 +310,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           rating?: number | null
+          role?: string | null
         }
         Update: {
           created_at?: string | null
@@ -259,6 +322,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           rating?: number | null
+          role?: string | null
         }
         Relationships: []
       }
