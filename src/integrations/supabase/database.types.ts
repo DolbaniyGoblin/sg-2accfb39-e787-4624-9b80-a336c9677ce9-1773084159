@@ -218,6 +218,44 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_routes: {
+        Row: {
+          courier_id: string
+          created_at: string | null
+          estimated_duration: number | null
+          id: string
+          is_best: boolean | null
+          route_order: string[]
+          total_distance: number | null
+        }
+        Insert: {
+          courier_id: string
+          created_at?: string | null
+          estimated_duration?: number | null
+          id?: string
+          is_best?: boolean | null
+          route_order: string[]
+          total_distance?: number | null
+        }
+        Update: {
+          courier_id?: string
+          created_at?: string | null
+          estimated_duration?: number | null
+          id?: string
+          is_best?: boolean | null
+          route_order?: string[]
+          total_distance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_routes_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           address: string

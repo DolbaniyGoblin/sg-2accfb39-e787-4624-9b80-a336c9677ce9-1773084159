@@ -1,5 +1,6 @@
 // Route optimization and ETA calculation service
 import type { Task } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Point {
   latitude: number;
@@ -151,4 +152,85 @@ export const routeService = {
     const mins = minutes % 60;
     return mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`;
   },
+
+  // Calculate ETAs for all tasks
+  calculateETAs(tasks: Task[], startLat: number, startLng: number): Map<string, Date> {
+    const etas = new Map<string, Date>();
+    const now = new Date();
+    let currentLat = startLat;
+    let currentLng = startLng;
+    let accumulatedMinutes = 0;
+
+    tasks.forEach(task => {
+      if (task.latitude && task.longitude) {
+        const distance = calculateDistance(currentLat, currentLng, task.latitude, task.longitude);
+        const minutes = this.calculateETA(distance); // 30 km/h avg
+        accumulatedMinutes += minutes + 15; // +15 min for delivery
+        
+        const eta = new Date(now.getTime() + accumulatedMinutes * 60000);
+        etas.set(task.id, eta);
+
+        currentLat = task.latitude;
+        currentLng = task.longitude;
+      }
+    });
+
+    return etas;
+  },
+
+  // Get location history for today (for trace)
+  async getTodayLocationHistory(courierId: string) {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from('location_history')
+      .select('*')
+      .eq('courier_id', courierId)
+      .gte('created_at', `${today}T00:00:00`)
+      .order('created_at', { ascending: true });
+    
+    return data || [];
+  },
+
+  // Add point to location history
+  async addLocationToHistory(courierId: string, latitude: number, longitude: number, speed: number) {
+    await supabase.from('location_history').insert({
+      courier_id: courierId,
+      latitude,
+      longitude,
+      speed
+    });
+  },
+
+  // Save route
+  async saveRoute(courierId: string, taskIds: string[], distance: number, duration: number, isBest: boolean) {
+    if (isBest) {
+      // Reset previous best route
+      await supabase
+        .from('saved_routes')
+        .update({ is_best: false })
+        .eq('courier_id', courierId);
+    }
+
+    await supabase.from('saved_routes').insert({
+      courier_id: courierId,
+      route_order: taskIds,
+      total_distance: distance,
+      estimated_duration: duration,
+      is_best: isBest
+    });
+  },
+
+  // Get best route
+  async getBestRoute(courierId: string) {
+    const { data } = await supabase
+      .from('saved_routes')
+      .select('*')
+      .eq('courier_id', courierId)
+      .eq('is_best', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    return data;
+  }
 };
