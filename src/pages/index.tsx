@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { taskService } from "@/services/taskService";
 import { deliveryService } from "@/services/deliveryService";
 import { locationService } from "@/services/locationService";
+import { TaskSwipeCard } from "@/components/TaskSwipeCard";
+import { notificationService } from "@/services/notificationService";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -29,6 +31,17 @@ export default function Dashboard() {
     if (user) {
       fetchDashboardData();
       
+      // Request notification permission
+      notificationService.requestPermission();
+      
+      // Subscribe to personal notifications
+      const unsubscribeNotifications = notificationService.subscribeToNewTasks(user.id, (newTask) => {
+        toast.success(`🚚 Новое задание: ${newTask.address}`);
+        notificationService.playSound("info");
+        setNextTasks(prev => [newTask, ...prev]);
+        setStats(prev => ({ ...prev, totalTasksToday: prev.totalTasksToday + 1 }));
+      });
+
       // Start location tracking when shift is on
       if (user.is_on_shift && !locationTrackingId) {
         const trackingId = locationService.startTracking(user.id);
@@ -39,11 +52,11 @@ export default function Dashboard() {
       const unsubscribe = taskService.subscribeToTasks(user.id, () => {
         console.log("Realtime update received");
         fetchDashboardData(); // Refresh data on any change
-        toast.info("Данные обновлены");
       });
 
       return () => {
         unsubscribe();
+        unsubscribeNotifications();
         if (locationTrackingId) {
           locationService.stopTracking(locationTrackingId);
         }
@@ -61,14 +74,47 @@ export default function Dashboard() {
       const statsData = await deliveryService.getTodayStats(user.id);
       setStats(statsData);
 
-      // Fetch next 3 tasks
-      const tasksData = await taskService.getNextTasks(user.id, 3);
-      setNextTasks(tasksData);
+      // Fetch active tasks for swipe deck
+      const tasksData = await taskService.getTodayTasks(user.id);
+      // Filter out completed tasks for the main deck
+      setNextTasks(tasksData.filter(t => t.status !== 'delivered'));
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      // Keep mock data as fallback
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleTaskAction = async (task: Task, action: 'complete' | 'problem') => {
+    if (!user) return;
+    
+    // Optimistic update
+    setNextTasks(prev => prev.filter(t => t.id !== task.id));
+    
+    try {
+      if (action === 'complete') {
+        if (task.status === 'pending') {
+           await taskService.updateTaskStatus(task.id, 'in_progress');
+           toast.success("Задание взято в работу");
+           notificationService.playSound("success");
+           // Add back to top if it was just started
+           fetchDashboardData(); 
+        } else {
+           await taskService.updateTaskStatus(task.id, 'delivered');
+           toast.success("Задание выполнено! 🎉");
+           notificationService.playSound("success");
+           notificationService.notifyAllTasksCompleted(stats.deliveredToday + 1);
+        }
+      } else {
+        toast.error("Сообщено о проблеме");
+        notificationService.playSound("error");
+        // Logic to report problem would go here
+      }
+      
+      fetchDashboardData();
+    } catch (e) {
+      toast.error("Ошибка обновления");
+      fetchDashboardData(); // Revert
     }
   };
 
@@ -128,38 +174,43 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Next Delivery */}
+        {/* Next Delivery / Swipe Deck */}
         <div>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="font-semibold text-lg">Ближайшие доставки</h2>
+            <h2 className="font-semibold text-lg">
+              {nextTasks.length > 0 ? "Ваши задания" : "Нет активных заданий"}
+            </h2>
             <Link href="/route" className="text-sm text-primary hover:underline">
-              Весь маршрут
+              Карта
             </Link>
           </div>
           
-          <div className="space-y-3">
+          <div className="relative min-h-[200px]">
             {nextTasks.length > 0 ? (
-              nextTasks.map((task) => (
-                <Card key={task.id} className="border-l-4 border-l-primary shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded">
-                        {formatTime(task.scheduled_time)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{task.boxes_count} кор.</span>
-                    </div>
-                    <h3 className="font-bold mb-1 truncate">{task.client_name}</h3>
-                    <div className="flex items-start text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4 mr-1 mt-0.5 shrink-0" />
-                      <span className="line-clamp-2">{task.address}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+              <div className="space-y-4">
+                {nextTasks.slice(0, 3).map((task) => (
+                  <TaskSwipeCard 
+                    key={task.id} 
+                    task={task}
+                    onSwipeRight={(t) => handleTaskAction(t, 'complete')}
+                    onSwipeLeft={(t) => handleTaskAction(t, 'problem')}
+                  />
+                ))}
+                {nextTasks.length > 3 && (
+                  <p className="text-center text-sm text-muted-foreground mt-2">
+                    И ещё {nextTasks.length - 3} заданий...
+                  </p>
+                )}
+              </div>
             ) : (
-              <div className="text-center py-8 bg-muted/30 rounded-lg">
-                <Truck className="w-12 h-12 text-muted-foreground mx-auto mb-2 opacity-50" />
-                <p className="text-muted-foreground">Заданий пока нет</p>
+              <div className="text-center py-12 bg-muted/30 rounded-xl border border-dashed">
+                <div className="bg-green-100 dark:bg-green-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Package className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="font-bold text-lg">Всё доставлено!</h3>
+                <p className="text-muted-foreground text-sm max-w-[200px] mx-auto mt-1">
+                  Отличная работа. Ожидайте новых назначений от диспетчера.
+                </p>
               </div>
             )}
           </div>

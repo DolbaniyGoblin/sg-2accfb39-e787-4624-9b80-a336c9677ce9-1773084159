@@ -33,7 +33,7 @@ export const notificationService = {
     const notification = new Notification(title, {
       icon: "/favicon.ico",
       badge: "/favicon.ico",
-      // @ts-ignore - vibrate is standard but missing in some TS definitions
+      // @ts-expect-error - vibrate is standard but missing in some TS definitions
       vibrate: [200, 100, 200],
       ...options,
     });
