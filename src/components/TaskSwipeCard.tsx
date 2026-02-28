@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useTransform } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Package, Clock, Phone, Navigation } from "lucide-react";
@@ -15,9 +15,14 @@ interface TaskSwipeCardProps {
 
 export function TaskSwipeCard({ task, onSwipeRight, onSwipeLeft }: TaskSwipeCardProps) {
   const x = useMotionValue(0);
+  
+  // All hooks must be at the top level
   const opacity = useTransform(x, [-100, 0, 100], [0.5, 1, 0.5]);
   const rotate = useTransform(x, [-100, 0, 100], [-10, 0, 10]);
   const bg = useTransform(x, [-100, 0, 100], ["#fee2e2", "#ffffff", "#dcfce7"]); // Red -> White -> Green
+  
+  const rightIndicatorOpacity = useTransform(x, [0, 50], [0, 1]);
+  const leftIndicatorOpacity = useTransform(x, [0, -50], [0, 1]);
 
   const [exitX, setExitX] = useState<number | null>(null);
 
@@ -32,7 +37,7 @@ export function TaskSwipeCard({ task, onSwipeRight, onSwipeLeft }: TaskSwipeCard
   };
 
   if (exitX !== null) {
-    return null; // Component removes itself via parent state usually, but this hides it visually immediately
+    return null; 
   }
 
   const isPending = task.status === "pending";
@@ -47,25 +52,25 @@ export function TaskSwipeCard({ task, onSwipeRight, onSwipeLeft }: TaskSwipeCard
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={handleDragEnd}
-      className="relative touch-none rounded-xl overflow-hidden shadow-lg mb-4 border border-border"
+      className="relative touch-none rounded-xl overflow-hidden shadow-lg mb-4 border border-border bg-card"
       whileTap={{ cursor: "grabbing" }}
     >
       {/* Swipe Indicators */}
       <motion.div 
-        style={{ opacity: useTransform(x, [0, 50], [0, 1]) }}
-        className="absolute left-4 top-4 z-10 text-green-600 font-bold text-2xl border-2 border-green-600 rounded-lg px-2 rotate-[-15deg]"
+        style={{ opacity: rightIndicatorOpacity }}
+        className="absolute left-4 top-4 z-10 text-green-600 font-bold text-2xl border-2 border-green-600 rounded-lg px-2 rotate-[-15deg] bg-white/50 backdrop-blur-sm"
       >
         {rightLabel.toUpperCase()}
       </motion.div>
 
       <motion.div 
-        style={{ opacity: useTransform(x, [0, -50], [0, 1]) }}
-        className="absolute right-4 top-4 z-10 text-red-500 font-bold text-2xl border-2 border-red-500 rounded-lg px-2 rotate-[15deg]"
+        style={{ opacity: leftIndicatorOpacity }}
+        className="absolute right-4 top-4 z-10 text-red-500 font-bold text-2xl border-2 border-red-500 rounded-lg px-2 rotate-[15deg] bg-white/50 backdrop-blur-sm"
       >
         {leftLabel.toUpperCase()}
       </motion.div>
 
-      <CardContent className="p-5 select-none bg-card">
+      <CardContent className="p-5 select-none">
         <div className="flex justify-between items-start mb-3">
           <Badge variant={isInProgress ? "default" : "secondary"} className="text-xs">
             {isInProgress ? "В работе" : "Ожидает"}
