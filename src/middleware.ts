@@ -1,100 +1,57 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const supabase = createMiddlewareClient({ req, res });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-        },
-      },
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // Public routes that don't require authentication
+  const publicRoutes = ["/auth/login", "/auth/register"];
+  const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route));
+
+  // If no session and trying to access protected route, redirect to login
+  if (!session && !isPublicRoute) {
+    const redirectUrl = new URL("/auth/login", req.url);
+    redirectUrl.searchParams.set("redirect", req.nextUrl.pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // If has session and trying to access auth pages, redirect to home
+  if (session && isPublicRoute) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  // Role-based access control
+  if (session) {
+    const { data: user } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", session.user.id)
+      .single();
+
+    // Admin-only routes
+    if (req.nextUrl.pathname.startsWith("/admin") && user?.role !== "admin") {
+      return NextResponse.redirect(new URL("/", req.url));
     }
-  );
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user;
-
-  // Защищённые роуты (требуют авторизации)
-  const protectedRoutes = ["/", "/route", "/boxes", "/history", "/profile", "/map"];
-  
-  // Публичные роуты (доступны без авторизации)
-  const authRoutes = ["/auth/login", "/auth/register"];
-
-  const { pathname } = request.nextUrl;
-
-  // Если пользователь НЕ авторизован
-  if (!user) {
-    // Если пытается попасть на защищённый роут → redirect на login
-    if (protectedRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
-      const loginUrl = new URL("/auth/login", request.url);
-      return NextResponse.redirect(loginUrl);
+    // Dispatcher and admin routes
+    if (req.nextUrl.pathname.startsWith("/dispatcher") && 
+        user?.role !== "dispatcher" && 
+        user?.role !== "admin") {
+      return NextResponse.redirect(new URL("/", req.url));
     }
   }
 
-  // Если пользователь авторизован
-  if (user) {
-    // Если пытается попасть на auth страницы → redirect на главную
-    if (authRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
-      const homeUrl = new URL("/", request.url);
-      return NextResponse.redirect(homeUrl);
-    }
-  }
-
-  return response;
+  return res;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
