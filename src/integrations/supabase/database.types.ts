@@ -42,13 +42,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "deliveries_courier_id_fkey"
-            columns: ["courier_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "deliveries_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -151,15 +144,7 @@ export type Database = {
           longitude?: number | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "locations_courier_id_fkey"
-            columns: ["courier_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -192,15 +177,7 @@ export type Database = {
           type?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -287,15 +264,7 @@ export type Database = {
           route_order?: string[]
           total_distance?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "saved_routes_courier_id_fkey"
-            columns: ["courier_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tasks: {
         Row: {
@@ -354,13 +323,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "tasks_courier_id_fkey"
-            columns: ["courier_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "tasks_delivery_point_id_fkey"
             columns: ["delivery_point_id"]
             isOneToOne: false
@@ -372,7 +334,7 @@ export type Database = {
       users: {
         Row: {
           created_at: string | null
-          email: string | null
+          email: string
           experience_months: number | null
           full_name: string | null
           id: string
@@ -380,12 +342,13 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           rating: number | null
-          role: string | null
-          status: string | null
+          role: string
+          status: string
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
-          email?: string | null
+          email: string
           experience_months?: number | null
           full_name?: string | null
           id: string
@@ -393,12 +356,13 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           rating?: number | null
-          role?: string | null
-          status?: string | null
+          role?: string
+          status?: string
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
-          email?: string | null
+          email?: string
           experience_months?: number | null
           full_name?: string | null
           id?: string
@@ -406,8 +370,9 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           rating?: number | null
-          role?: string | null
-          status?: string | null
+          role?: string
+          status?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

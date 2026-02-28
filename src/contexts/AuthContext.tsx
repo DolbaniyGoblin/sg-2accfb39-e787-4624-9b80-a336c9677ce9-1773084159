@@ -65,11 +65,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log("User profile loaded successfully:", data);
-      setUser({
-        ...data,
+      
+      // Ensure all required fields for User type are present
+      const userProfile: User = {
+        id: data.id,
+        email: data.email,
+        full_name: data.full_name || "",
+        // Cast role and status to specific union types
         role: (data.role || "courier") as "courier" | "dispatcher" | "admin",
         status: (data.status || "active") as "active" | "blocked",
-      });
+        photo_url: data.photo_url,
+        created_at: data.created_at,
+        // Add defaults for new fields if they are null in DB
+        phone: data.phone || "",
+        rating: data.rating || 5.0,
+        experience_months: data.experience_months || 0,
+        is_on_shift: data.is_on_shift || false
+      };
+
+      setUser(userProfile);
     } catch (error) {
       console.error("Error in fetchUserProfile:", error);
     } finally {
