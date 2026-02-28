@@ -3,10 +3,13 @@ import { useRouter } from "next/router";
 import { Layout } from "@/components/ui/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Package, TrendingUp, Shield, UserCog, MapPin } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Users, Package, TrendingUp, Shield, UserCog, MapPin, UserPlus, Mail, Lock, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -14,7 +17,6 @@ import { StatsChart } from "@/components/analytics/StatsChart";
 import { CourierLeaderboard } from "@/components/analytics/CourierLeaderboard";
 import { dispatcherService } from "@/services/dispatcherService";
 
-// Extend the AuthContext user type or define a compatible one
 interface AdminUser {
   id: string;
   email?: string;
@@ -43,7 +45,6 @@ interface DashboardStats {
 
 export default function AdminPanel() {
   const { user } = useAuth();
-  // Cast user to include role for TS checks
   const currentUser = user as unknown as AdminUser;
   
   const router = useRouter();
@@ -60,19 +61,25 @@ export default function AdminPanel() {
   const [analyticsPeriod, setAnalyticsPeriod] = useState<"day" | "week" | "month">("week");
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  
+  // New user creation state
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserFullName, setNewUserFullName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"courier" | "dispatcher" | "admin">("courier");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    // Check access
     if (currentUser) {
-        if (currentUser.role !== "admin") {
-            toast.error("Доступ запрещён");
-            router.push("/");
-            return;
-        }
-        loadData();
+      if (currentUser.role !== "admin") {
+        toast.error("Доступ запрещён");
+        router.push("/");
+        return;
+      }
+      loadData();
     } else if (currentUser === null) {
-        // Not logged in
-        router.push("/auth/login");
+      router.push("/auth/login");
     }
   }, [currentUser, router]);
 
@@ -93,9 +100,9 @@ export default function AdminPanel() {
       if (usersRes.error) throw usersRes.error;
       
       const loadedUsers = (usersRes.data || []).map(u => ({
-          ...u,
-          role: (u.role || "courier") as "courier" | "dispatcher" | "admin",
-          status: (u.status || "active") as "active" | "blocked"
+        ...u,
+        role: (u.role || "courier") as "courier" | "dispatcher" | "admin",
+        status: (u.status || "active") as "active" | "blocked"
       }));
       
       setUsers(loadedUsers);
@@ -132,6 +139,67 @@ export default function AdminPanel() {
     }
   };
 
+  const createNewUser = async () => {
+    if (!newUserEmail || !newUserPassword || !newUserFullName) {
+      toast.error("Заполните все поля");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: newUserEmail,
+        password: newUserPassword,
+        email_confirm: true,
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Не удалось создать пользователя");
+
+      // Create user record
+      const { error: userError } = await supabase
+        .from("users")
+        .insert({
+          id: authData.user.id,
+          email: newUserEmail,
+          full_name: newUserFullName,
+          role: newUserRole,
+          status: "active",
+        });
+
+      if (userError) throw userError;
+
+      // Create profile record
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          id: authData.user.id,
+          email: newUserEmail,
+          full_name: newUserFullName,
+        });
+
+      if (profileError) throw profileError;
+
+      toast.success(`Пользователь ${newUserEmail} создан!`);
+      
+      // Reset form
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserFullName("");
+      setNewUserRole("courier");
+      setIsCreateDialogOpen(false);
+      
+      // Reload data
+      loadData();
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      toast.error(error.message || "Ошибка создания пользователя");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const changeUserRole = async (userId: string, newRole: "courier" | "dispatcher" | "admin") => {
     try {
       const { error } = await supabase
@@ -142,8 +210,6 @@ export default function AdminPanel() {
       if (error) throw error;
 
       toast.success("Роль успешно изменена");
-      
-      // Optimistic update
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
     } catch (error) {
       console.error("Error changing role:", error);
@@ -163,8 +229,6 @@ export default function AdminPanel() {
       if (error) throw error;
 
       toast.success(newStatus === "blocked" ? "Пользователь заблокирован" : "Пользователь разблокирован");
-      
-      // Optimistic update
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus as any } : u));
     } catch (error) {
       console.error("Error toggling status:", error);
@@ -282,7 +346,6 @@ export default function AdminPanel() {
           </Card>
         </div>
 
-        {/* Analytics Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">📊 Аналитика</h2>
@@ -316,9 +379,88 @@ export default function AdminPanel() {
           <CourierLeaderboard couriers={leaderboard} period={analyticsPeriod} />
         </div>
 
-        {/* Users Management Section */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold">👥 Управление пользователями</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">👥 Управление пользователями</h2>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Создать пользователя
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Создать нового пользователя</DialogTitle>
+                  <DialogDescription>
+                    Создайте нового курьера, диспетчера или администратора
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="user@example.com"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Пароль</Label>
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Минимум 6 символов"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fullname">Полное имя</Label>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="fullname"
+                        placeholder="Иван Иванов"
+                        value={newUserFullName}
+                        onChange={(e) => setNewUserFullName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Роль</Label>
+                    <Select value={newUserRole} onValueChange={(v: any) => setNewUserRole(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="courier">🚚 Курьер</SelectItem>
+                        <SelectItem value="dispatcher">📋 Диспетчер</SelectItem>
+                        <SelectItem value="admin">👑 Администратор</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={creating}>
+                    Отмена
+                  </Button>
+                  <Button onClick={createNewUser} disabled={creating}>
+                    {creating ? "Создание..." : "Создать"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
           {users.map((user) => (
             <div key={user.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg bg-card gap-4">
               <div className="flex items-center gap-4">
@@ -343,7 +485,6 @@ export default function AdminPanel() {
                   value={user.role}
                   onChange={(e) => changeUserRole(user.id, e.target.value as any)}
                   className="px-3 py-2 border rounded-md text-sm bg-background"
-                  disabled={user.id === user.id} // This condition looks wrong in original, fixing logic to disable for current user if needed, or just let them change roles
                 >
                   <option value="courier">Курьер</option>
                   <option value="dispatcher">Диспетчер</option>

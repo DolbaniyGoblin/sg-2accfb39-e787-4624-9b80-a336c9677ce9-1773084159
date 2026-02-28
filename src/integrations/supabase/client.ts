@@ -1,13 +1,7 @@
-import { createBrowserClient } from '@supabase/ssr';
-import type { Database } from './types';
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./types";
 
-// Read from environment variables
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = "https://kaciggprpbhrotniphcu.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthY2lnZ3BycGJocm90bmlwaGN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwOTk2NjQsImV4cCI6MjA4NzY3NTY2NH0._rFTH7SE0ekdvbp266-4rNx4k4O1Dex1VohfrCXgSBU";
 
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  throw new Error('Missing Supabase environment variables. Please check your .env.local file.');
-}
-
-// Create a Supabase client for the browser with cookie support
-export const supabase = createBrowserClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
