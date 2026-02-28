@@ -6,8 +6,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
-import { LogOut, Star, Calendar, Phone, Mail, Package, TrendingUp, Award } from "lucide-react";
+import { LogOut, Star, Calendar, Phone, Mail, Package, TrendingUp, Award, Shield, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -19,11 +20,24 @@ export default function ProfilePage() {
     avgRating: 5.0,
   });
 
+  const [dbUser, setDbUser] = useState<any>(null);
+
   useEffect(() => {
     if (user) {
       fetchUserStats();
+      fetchDbUser();
     }
   }, [user]);
+
+  const fetchDbUser = async () => {
+    if (!user?.id) return;
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    if (data) setDbUser(data);
+  };
 
   const fetchUserStats = async () => {
     // В реальном приложении здесь будет запрос к Supabase
@@ -71,6 +85,41 @@ export default function ProfilePage() {
 
               <h2 className="text-2xl font-bold mb-1">{user?.full_name}</h2>
               <p className="text-sm text-muted-foreground mb-4">ID: {user?.id.slice(0, 8)}</p>
+
+              {dbUser?.role && (
+                <Badge className="mb-4" variant={
+                  dbUser.role === 'admin' ? 'destructive' : 
+                  dbUser.role === 'dispatcher' ? 'default' : 'secondary'
+                }>
+                  {dbUser.role === 'admin' && '👑 Администратор'}
+                  {dbUser.role === 'dispatcher' && '📋 Диспетчер'}
+                  {dbUser.role === 'courier' && '🚚 Курьер'}
+                </Badge>
+              )}
+
+              <div className="flex flex-col gap-2 w-full mb-4">
+                {(dbUser?.role === 'admin' || dbUser?.role === 'dispatcher') && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2 border-primary/50"
+                    onClick={() => router.push('/dispatcher')}
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    Панель Диспетчера
+                  </Button>
+                )}
+                
+                {dbUser?.role === 'admin' && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2 border-red-500/50 hover:bg-red-50 dark:hover:bg-red-950/30"
+                    onClick={() => router.push('/admin')}
+                  >
+                    <Shield className="w-4 h-4 text-red-500" />
+                    Панель Администратора
+                  </Button>
+                )}
+              </div>
 
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center bg-yellow-100 dark:bg-yellow-900/30 px-3 py-1 rounded-full">

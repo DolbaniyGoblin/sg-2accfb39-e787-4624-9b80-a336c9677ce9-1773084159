@@ -1,32 +1,76 @@
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value: "",
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value: "",
+            ...options,
+          });
+        },
+      },
+    }
+  );
 
-  // Public routes that don't require authentication
+  const { data: { session } } = await supabase.auth.getSession();
+
+  // Public routes
   const publicRoutes = ["/auth/login", "/auth/register"];
-  const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname.startsWith(route));
 
-  // If no session and trying to access protected route, redirect to login
   if (!session && !isPublicRoute) {
-    const redirectUrl = new URL("/auth/login", req.url);
-    redirectUrl.searchParams.set("redirect", req.nextUrl.pathname);
+    const redirectUrl = new URL("/auth/login", request.url);
+    redirectUrl.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If has session and trying to access auth pages, redirect to home
   if (session && isPublicRoute) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Role-based access control
+  // Role-based access
   if (session) {
     const { data: user } = await supabase
       .from("users")
@@ -34,20 +78,18 @@ export async function middleware(req: NextRequest) {
       .eq("id", session.user.id)
       .single();
 
-    // Admin-only routes
-    if (req.nextUrl.pathname.startsWith("/admin") && user?.role !== "admin") {
-      return NextResponse.redirect(new URL("/", req.url));
+    if (request.nextUrl.pathname.startsWith("/admin") && user?.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // Dispatcher and admin routes
-    if (req.nextUrl.pathname.startsWith("/dispatcher") && 
+    if (request.nextUrl.pathname.startsWith("/dispatcher") && 
         user?.role !== "dispatcher" && 
         user?.role !== "admin") {
-      return NextResponse.redirect(new URL("/", req.url));
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
-  return res;
+  return response;
 }
 
 export const config = {
