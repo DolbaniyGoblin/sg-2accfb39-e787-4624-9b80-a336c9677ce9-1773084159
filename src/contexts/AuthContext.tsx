@@ -65,7 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log("User profile loaded successfully:", data);
-      setUser(data);
+      setUser({
+        ...data,
+        role: (data.role || "courier") as "courier" | "dispatcher" | "admin",
+        status: (data.status || "active") as "active" | "blocked",
+      });
     } catch (error) {
       console.error("Error in fetchUserProfile:", error);
     } finally {
