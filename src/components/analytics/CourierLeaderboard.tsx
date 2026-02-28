@@ -1,95 +1,107 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Star, Zap } from "lucide-react";
+import { Trophy, Medal, Award } from "lucide-react";
 
 interface CourierStats {
   id: string;
-  name: string;
-  photo_url?: string;
+  full_name: string;
+  photo_url: string | null;
   completed: number;
+  distance: number;
   rating: number;
-  totalKm: number;
 }
 
 interface CourierLeaderboardProps {
   couriers: CourierStats[];
-  title?: string;
+  period: string;
 }
 
-export function CourierLeaderboard({ couriers, title = "🏆 Топ курьеров" }: CourierLeaderboardProps) {
-  const top3 = couriers.slice(0, 3);
-  const others = couriers.slice(3, 10);
+export function CourierLeaderboard({ couriers, period }: CourierLeaderboardProps) {
+  const getMedalIcon = (index: number) => {
+    switch (index) {
+      case 0:
+        return <Trophy className="h-5 w-5 text-yellow-500" />;
+      case 1:
+        return <Medal className="h-5 w-5 text-gray-400" />;
+      case 2:
+        return <Award className="h-5 w-5 text-orange-600" />;
+      default:
+        return null;
+    }
+  };
 
-  const getMedalIcon = (position: number) => {
-    if (position === 0) return "🥇";
-    if (position === 1) return "🥈";
-    if (position === 2) return "🥉";
-    return `#${position + 1}`;
+  const getMedalColor = (index: number) => {
+    switch (index) {
+      case 0:
+        return "bg-yellow-500/20 border-yellow-500/30";
+      case 1:
+        return "bg-gray-400/20 border-gray-400/30";
+      case 2:
+        return "bg-orange-600/20 border-orange-600/30";
+      default:
+        return "bg-gray-700/20 border-gray-700/30";
+    }
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-600" />
-          {title}
+    <Card className="bg-gray-800/50 border-gray-700">
+      <CardHeader>
+        <CardTitle className="text-lg text-white">
+          🏆 Топ курьеров {period === "day" ? "за сегодня" : period === "week" ? "за неделю" : "за месяц"}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Top 3 - Special Display */}
-        {top3.map((courier, index) => (
-          <div
-            key={courier.id}
-            className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
-              index === 0
-                ? "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-400 dark:from-yellow-950 dark:to-orange-950"
-                : index === 1
-                ? "bg-gradient-to-r from-gray-50 to-slate-50 border-gray-400 dark:from-gray-900 dark:to-slate-900"
-                : "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-400 dark:from-orange-950 dark:to-amber-950"
-            }`}
-          >
-            <span className="text-2xl flex-shrink-0">{getMedalIcon(index)}</span>
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={courier.photo_url} />
-              <AvatarFallback>{courier.name[0]}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold truncate">{courier.name}</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Zap className="h-3 w-3" />
-                  {courier.completed} дост.
-                </span>
-                <span className="flex items-center gap-1">
-                  <Star className="h-3 w-3 text-yellow-600 fill-yellow-600" />
-                  {courier.rating.toFixed(1)}
-                </span>
-              </div>
-            </div>
-            <div className="text-right">
-              <Badge variant={index === 0 ? "default" : "secondary"}>
-                {courier.totalKm.toFixed(1)} км
-              </Badge>
-            </div>
+      <CardContent>
+        {couriers.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            Нет данных за выбранный период
           </div>
-        ))}
-
-        {/* Others - Compact Display */}
-        {others.length > 0 && (
-          <div className="space-y-2 pt-2 border-t">
-            {others.map((courier, index) => (
-              <div key={courier.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                <span className="text-sm text-muted-foreground font-mono w-6">#{index + 4}</span>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={courier.photo_url} />
-                  <AvatarFallback className="text-xs">{courier.name[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{courier.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {courier.completed} • {courier.rating.toFixed(1)}⭐ • {courier.totalKm.toFixed(1)} км
-                  </p>
+        ) : (
+          <div className="space-y-3">
+            {couriers.map((courier, index) => (
+              <div
+                key={courier.id}
+                className={`flex items-center gap-3 p-3 rounded-lg border ${getMedalColor(
+                  index
+                )}`}
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex-shrink-0">
+                    {getMedalIcon(index) || (
+                      <div className="w-5 h-5 flex items-center justify-center text-gray-500 font-bold">
+                        {index + 1}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={courier.photo_url || undefined} />
+                    <AvatarFallback>{courier.full_name[0]}</AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-white truncate">
+                      {courier.full_name}
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      {courier.distance.toFixed(1)} км
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                  >
+                    {courier.completed} 📦
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-500/20 text-blue-500 border-blue-500/30"
+                  >
+                    ⭐ {courier.rating.toFixed(1)}
+                  </Badge>
                 </div>
               </div>
             ))}
