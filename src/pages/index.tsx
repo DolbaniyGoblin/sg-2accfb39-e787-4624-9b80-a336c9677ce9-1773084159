@@ -14,6 +14,7 @@ import { deliveryService } from "@/services/deliveryService";
 import { locationService } from "@/services/locationService";
 import { TaskSwipeCard } from "@/components/TaskSwipeCard";
 import { notificationService } from "@/services/notificationService";
+import { confettiEffects } from "@/lib/confetti";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -116,6 +117,40 @@ export default function Dashboard() {
       toast.error("Ошибка обновления");
       fetchDashboardData(); // Revert
     }
+  };
+
+  const completeTask = async (taskId: string, withPhoto: boolean) => {
+    try {
+      await taskService.updateTaskStatus(taskId, "delivered");
+      
+      notificationService.show({
+        title: "🎉 Задание выполнено!",
+        body: "Отличная работа!",
+        type: "achievement",
+      });
+      
+      // Обновляем данные
+      await fetchDashboardData();
+      
+      // Проверяем, все ли задания выполнены
+      const remainingTasks = nextTasks.filter(t => t.id !== taskId && t.status !== "delivered");
+      if (remainingTasks.length === 0 && nextTasks.length > 0) {
+        // Все задания выполнены! 🎉
+        confettiEffects.celebrate();
+        
+        notificationService.show({
+          title: "🏆 Все задания выполнены!",
+          body: "Отличная работа за сегодня!",
+          type: "achievement",
+        });
+      }
+    } catch (error) {
+      console.error("Error completing task:", error);
+      toast.error("Ошибка завершения задания");
+    }
+  };
+
+  const reportProblem = async (taskId: string) => {
   };
 
   const toggleShift = async () => {

@@ -6,6 +6,18 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        <meta name="description" content="Профессиональная система для управления курьерскими доставками" />
+        <link rel="icon" href="/favicon.ico" />
+        
+        {/* PWA Meta Tags */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#eab308" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="КурьерПро" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        
         <SEOElements />
         {/*
           CRITICAL: DO NOT REMOVE THIS SCRIPT
