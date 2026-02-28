@@ -313,7 +313,7 @@ export default function AdminPanel() {
             </div>
           )}
 
-          <CourierLeaderboard couriers={leaderboard} />
+          <CourierLeaderboard couriers={leaderboard} period={analyticsPeriod} />
         </div>
 
         {/* Users Management Section */}
