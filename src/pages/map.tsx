@@ -1,19 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Layout } from "@/components/ui/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Navigation, 
   MapPin, 
   Package, 
-  Clock, 
   Zap,
-  CheckCircle2,
   Save,
   TrendingUp,
-  AlertTriangle,
   Eye,
   EyeOff
 } from "lucide-react";
@@ -293,7 +289,7 @@ export default function MapPage() {
       const optimized = optimizeRoute(active, userLocation.lat, userLocation.lng);
       setOrderedTasks([...optimized, ...delivered]);
       setIsOptimizing(false);
-      toast.success("Маршрут оптимизирован!");
+      toast.success("✅ Маршрут оптимизирован!");
     }, 500);
   };
 
@@ -301,13 +297,13 @@ export default function MapPage() {
     if (!user?.id) return;
     const taskIds = orderedTasks.map(t => t.id);
     await routeService.saveRoute(user.id, taskIds, stats.totalDistance, 0, true);
-    toast.success("Маршрут сохранён как лучший!");
+    toast.success("💾 Маршрут сохранён как лучший!");
   };
 
   const handleLoadBestRoute = async () => {
     if (!user?.id) return;
     const best = await routeService.getBestRoute(user.id);
-    if (!best) return toast.error("Нет сохранённых маршрутов");
+    if (!best) return toast.error("❌ Нет сохранённых маршрутов");
     
     const newOrder: Task[] = [];
     best.route_order.forEach(id => {
@@ -320,26 +316,26 @@ export default function MapPage() {
     });
 
     setOrderedTasks(newOrder);
-    toast.success("Лучший маршрут загружен!");
+    toast.success("📈 Лучший маршрут загружен!");
   };
 
   const handleNavigateToNext = () => {
     if (!nextTask || !nextTask.latitude || !nextTask.longitude) {
-      return toast.error("Нет следующей точки доставки");
+      return toast.error("❌ Нет следующей точки доставки");
     }
     
     const yandexMapsUrl = `https://yandex.ru/maps/?rtext=${userLocation?.lat},${userLocation?.lng}~${nextTask.latitude},${nextTask.longitude}&rtt=auto`;
     window.open(yandexMapsUrl, '_blank');
-    toast.success("Открываю навигацию в Яндекс.Картах");
+    toast.success("🧭 Открываю навигацию в Яндекс.Картах");
   };
 
   return (
     <Layout title="Карта доставок">
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-4 pb-24">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold">🗺️ Карта доставок</h1>
-            <p className="text-sm text-muted-foreground">Построение маршрута</p>
+            <p className="text-sm text-muted-foreground">Оптимизация маршрута</p>
           </div>
         </div>
 
@@ -347,7 +343,7 @@ export default function MapPage() {
           <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
             <MapPin className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800 dark:text-amber-200">
-              ⚠️ Разрешите доступ к геолокации
+              ⚠️ Разрешите доступ к геолокации для построения маршрута
             </AlertDescription>
           </Alert>
         )}
@@ -356,13 +352,13 @@ export default function MapPage() {
           <Alert>
             <Package className="h-4 w-4" />
             <AlertDescription>
-              На сегодня нет заданий
+              📦 На сегодня нет заданий. Проверьте раздел "Коробки"
             </AlertDescription>
           </Alert>
         )}
 
         {nextTask && (
-          <Card className="border-2 border-green-500">
+          <Card className="border-2 border-green-500 shadow-lg">
             <CardHeader className="pb-3 bg-green-50 dark:bg-green-950">
               <CardTitle className="text-lg flex items-center gap-2 text-green-700 dark:text-green-300">
                 <Navigation className="h-5 w-5" />
@@ -371,9 +367,9 @@ export default function MapPage() {
             </CardHeader>
             <CardContent className="space-y-3 pt-4">
               <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-green-600 mt-1" />
-                <div>
-                  <p className="font-bold">{nextTask.address}</p>
+                <MapPin className="h-5 w-5 text-green-600 mt-1 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-bold text-base">{nextTask.address}</p>
                   <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
                     <span>⏰ {new Date(nextTask.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     <span>📦 {nextTask.boxes_count} кор.</span>
@@ -390,45 +386,47 @@ export default function MapPage() {
                 onClick={handleNavigateToNext} 
                 className="w-full h-12 text-base font-bold bg-green-600 hover:bg-green-700" 
                 disabled={!userLocation}
+                size="lg"
               >
                 <Navigation className="mr-2 h-5 w-5" />
-                🧭 Построить маршрут
+                🧭 Построить маршрут в Яндекс.Картах
               </Button>
             </CardContent>
           </Card>
         )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="p-3">
-            <div className="text-xs text-muted-foreground mb-1">Дистанция</div>
-            <p className="text-xl font-bold">{stats.totalDistance.toFixed(1)} км</p>
+          <Card className="p-4">
+            <div className="text-xs text-muted-foreground mb-1">🛣️ Дистанция</div>
+            <p className="text-2xl font-bold">{stats.totalDistance.toFixed(1)} км</p>
           </Card>
           
-          <Card className="p-3">
-            <div className="text-xs text-muted-foreground mb-1">Готово</div>
-            <p className="text-xl font-bold">{stats.delivered} / {stats.total}</p>
+          <Card className="p-4">
+            <div className="text-xs text-muted-foreground mb-1">✅ Готово</div>
+            <p className="text-2xl font-bold">{stats.delivered} / {stats.total}</p>
           </Card>
 
-          <Card className="p-3">
-            <div className="text-xs text-muted-foreground mb-1">В пути</div>
-            <p className="text-xl font-bold">{stats.inProgress}</p>
+          <Card className="p-4">
+            <div className="text-xs text-muted-foreground mb-1">🚚 В пути</div>
+            <p className="text-2xl font-bold">{stats.inProgress}</p>
           </Card>
 
-          <Card className="p-3">
-            <div className="text-xs text-muted-foreground mb-1">Ожидает</div>
-            <p className="text-xl font-bold">{stats.pending}</p>
+          <Card className="p-4">
+            <div className="text-xs text-muted-foreground mb-1">📦 Ожидает</div>
+            <p className="text-2xl font-bold">{stats.pending}</p>
           </Card>
         </div>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Управление</CardTitle>
+            <CardTitle className="text-base">🎮 Управление маршрутом</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
             <Button 
               onClick={handleOptimize} 
               disabled={isOptimizing || !userLocation}
               variant="default"
+              size="lg"
             >
               <Zap className="mr-2 h-4 w-4" />
               ⚡ Оптимизировать
@@ -437,6 +435,7 @@ export default function MapPage() {
             <Button 
               onClick={handleLoadBestRoute} 
               variant="outline"
+              size="lg"
             >
               <TrendingUp className="mr-2 h-4 w-4" />
               📈 Лучший
@@ -445,6 +444,7 @@ export default function MapPage() {
             <Button 
               onClick={handleSaveRoute}
               variant="outline"
+              size="lg"
             >
               <Save className="mr-2 h-4 w-4" />
               💾 Сохранить
@@ -453,6 +453,7 @@ export default function MapPage() {
             <Button 
               onClick={() => setShowTrace(!showTrace)}
               variant="outline"
+              size="lg"
             >
               {showTrace ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
               {showTrace ? "👁️ След" : "Скрыть"}
@@ -462,7 +463,7 @@ export default function MapPage() {
 
         <Card className="overflow-hidden">
           <CardHeader className="py-3">
-            <CardTitle className="text-base">🗺️ Карта</CardTitle>
+            <CardTitle className="text-base">🗺️ Интерактивная карта</CardTitle>
           </CardHeader>
           <div id="map-container" className="w-full h-[500px] bg-muted" />
         </Card>

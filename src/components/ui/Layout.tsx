@@ -3,9 +3,8 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { Toaster } from "sonner";
-import { Loader2, LogOut, User, Map, History, Home, MapPin } from "lucide-react";
+import { Loader2, User, History, Home, Package, Map } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,7 +13,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children, title = "Е.Д.С. Личный кабинет", requireAuth = true }: LayoutProps) {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   if (loading) {
@@ -32,7 +31,8 @@ export function Layout({ children, title = "Е.Д.С. Личный кабине�
 
   const navItems = [
     { icon: Home, label: "Дашборд", href: "/" },
-    { icon: MapPin, label: "Коробки", href: "/boxes" },
+    { icon: Package, label: "Коробки", href: "/boxes" },
+    { icon: Map, label: "Карта", href: "/map" },
     { icon: History, label: "История", href: "/history" },
     { icon: User, label: "Профиль", href: "/profile" },
   ];
@@ -55,8 +55,8 @@ export function Layout({ children, title = "Е.Д.С. Личный кабине�
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
-                    isActive ? "text-primary" : "text-muted-foreground"
+                  className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
