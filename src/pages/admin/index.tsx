@@ -1,29 +1,73 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/ui/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Users, Package, TrendingUp, Activity, Shield, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Package, MapPin, TrendingUp, UserCog, Shield } from "lucide-react";
-import { useRouter } from "next/router";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import type { Database } from "@/integrations/supabase/types";
+import { StatsChart } from "@/components/analytics/StatsChart";
+import { CourierLeaderboard } from "@/components/analytics/CourierLeaderboard";
+import { dispatcherService } from "@/services/dispatcherService";
 
-type User = Database["public"]["Tables"]["users"]["Row"];
-type Task = Database["public"]["Tables"]["tasks"]["Row"];
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  role: "courier" | "dispatcher" | "admin";
+  status: "active" | "blocked";
+  photo_url?: string;
+  created_at: string;
+}
 
-export default function AdminDashboard() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
+interface Stats {
+  totalUsers: number;
+  activeCouriers: number;
+  totalDeliveries: number;
+  todayDeliveries: number;
+}
+
+export default function AdminPanel() {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [stats, setStats] = useState<Stats>({
+    totalUsers: 0,
+    activeCouriers: 0,
+    totalDeliveries: 0,
+    todayDeliveries: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<"day" | "week" | "month">("week");
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
   useEffect(() => {
-    checkAdminAccess();
-    loadData();
-  }, []);
+    if (user?.role === "admin") {
+      fetchUsers();
+      fetchStats();
+      fetchAnalytics();
+    } else {
+      setLoading(false);
+    }
+  }, [user, analyticsPeriod]);
+
+  const fetchAnalytics = async () => {
+    try {
+      const [analytics, leaders] = await Promise.all([
+        dispatcherService.getAnalytics(analyticsPeriod),
+        dispatcherService.getCourierLeaderboard(analyticsPeriod),
+      ]);
+      
+      setAnalyticsData(analytics);
+      setLeaderboard(leaders);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    }
+  };
 
   const checkAdminAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -219,58 +263,86 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Управление пользователями</CardTitle>
-            <CardDescription>Изменение ролей и статусов пользователей</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Avatar>
-                      <AvatarImage src={user.photo_url || undefined} />
-                      <AvatarFallback>{user.full_name?.[0] || "?"}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{user.full_name || "Без имени"}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {getRoleBadge(user.role)}
-                        <Badge variant={user.status === "active" ? "default" : "destructive"}>
-                          {user.status === "active" ? "Активен" : "Заблокирован"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <select
-                      value={user.role}
-                      onChange={(e) => changeUserRole(user.id, e.target.value as any)}
-                      className="px-3 py-2 border rounded-md text-sm"
-                      disabled={user.id === currentUser?.id}
-                    >
-                      <option value="courier">Курьер</option>
-                      <option value="dispatcher">Диспетчер</option>
-                      <option value="admin">Админ</option>
-                    </select>
-                    
-                    <Button
-                      variant={user.status === "active" ? "destructive" : "default"}
-                      size="sm"
-                      onClick={() => toggleUserStatus(user.id, user.status)}
-                      disabled={user.id === currentUser?.id}
-                    >
-                      {user.status === "active" ? "Заблокировать" : "Разблокировать"}
-                    </Button>
+        {/* Analytics Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">📊 Аналитика</h2>
+            <Select value={analyticsPeriod} onValueChange={(v: any) => setAnalyticsPeriod(v)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">За день</SelectItem>
+                <SelectItem value="week">За неделю</SelectItem>
+                <SelectItem value="month">За месяц</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {analyticsData && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <StatsChart
+                title="📦 Доставки по дням"
+                data={analyticsData.deliveriesByDay || []}
+                valueSuffix=" дост."
+              />
+              <StatsChart
+                title="🛣️ Километраж"
+                data={analyticsData.kmByDay || []}
+                valueSuffix=" км"
+              />
+            </div>
+          )}
+
+          <CourierLeaderboard couriers={leaderboard} />
+        </div>
+
+        {/* Users Management Section */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">👥 Управление пользователями</h2>
+          {users.map((user) => (
+            <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-4">
+                <Avatar>
+                  <AvatarImage src={user.photo_url || undefined} />
+                  <AvatarFallback>{user.full_name?.[0] || "?"}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{user.full_name || "Без имени"}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {getRoleBadge(user.role)}
+                    <Badge variant={user.status === "active" ? "default" : "destructive"}>
+                      {user.status === "active" ? "Активен" : "Заблокирован"}
+                    </Badge>
                   </div>
                 </div>
-              ))}
+              </div>
+              
+              <div className="flex gap-2">
+                <select
+                  value={user.role}
+                  onChange={(e) => changeUserRole(user.id, e.target.value as any)}
+                  className="px-3 py-2 border rounded-md text-sm"
+                  disabled={user.id === currentUser?.id}
+                >
+                  <option value="courier">Курьер</option>
+                  <option value="dispatcher">Диспетчер</option>
+                  <option value="admin">Админ</option>
+                </select>
+                
+                <Button
+                  variant={user.status === "active" ? "destructive" : "default"}
+                  size="sm"
+                  onClick={() => toggleUserStatus(user.id, user.status)}
+                  disabled={user.id === currentUser?.id}
+                >
+                  {user.status === "active" ? "Заблокировать" : "Разблокировать"}
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       </div>
     </Layout>
   );
