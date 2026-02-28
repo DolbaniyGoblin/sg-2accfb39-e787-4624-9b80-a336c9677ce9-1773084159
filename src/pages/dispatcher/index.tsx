@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, MapPin, Package, Users, Clock } from "lucide-react";
+import { Plus, MapPin, Package, Users, Clock, Map } from "lucide-react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
+import Link from "next/link";
 import type { Database } from "@/integrations/supabase/types";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
@@ -107,6 +108,10 @@ export default function DispatcherDashboard() {
               <MapPin className="h-4 w-4" />
               Добавить точку
             </Button>
+            <Button onClick={() => router.push("/dispatcher/live-map")} variant="outline" className="gap-2">
+              <Map className="h-4 w-4" />
+              Карта
+            </Button>
           </div>
         </div>
 
@@ -153,6 +158,45 @@ export default function DispatcherDashboard() {
               <div className="text-2xl font-bold">{stats.activePoints}/{stats.totalPoints}</div>
               <p className="text-xs text-muted-foreground">Активных точек</p>
             </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="cursor-pointer hover:bg-accent transition-colors">
+            <Link href="/dispatcher/add-task">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <Plus className="h-12 w-12 text-primary mb-4" />
+                <h3 className="font-semibold text-lg">Создать задание</h3>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Добавить новую доставку
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="cursor-pointer hover:bg-accent transition-colors">
+            <Link href="/dispatcher/add-point">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <MapPin className="h-12 w-12 text-primary mb-4" />
+                <h3 className="font-semibold text-lg">Добавить точку</h3>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Новый адрес доставки
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="cursor-pointer hover:bg-accent transition-colors">
+            <Link href="/dispatcher/live-map">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <Map className="h-12 w-12 text-primary mb-4" />
+                <h3 className="font-semibold text-lg">Карта онлайн</h3>
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Мониторинг курьеров
+                </p>
+              </CardContent>
+            </Link>
           </Card>
         </div>
 
