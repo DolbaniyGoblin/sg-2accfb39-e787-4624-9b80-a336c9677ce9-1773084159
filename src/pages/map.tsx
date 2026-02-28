@@ -10,13 +10,10 @@ import {
   Package, 
   Clock, 
   Zap,
-  Route as RouteIcon,
   CheckCircle2,
-  ArrowUpDown,
   Save,
   TrendingUp,
   AlertTriangle,
-  Settings,
   Eye,
   EyeOff
 } from "lucide-react";
@@ -33,7 +30,6 @@ declare global {
   }
 }
 
-// Вспомогательная функция для расчёта расстояния
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; 
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -46,7 +42,6 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Оптимизация маршрута (Nearest Neighbor)
 function optimizeRoute(tasks: Task[], startLat: number, startLng: number): Task[] {
   if (tasks.length <= 1) return tasks;
   const optimized: Task[] = [];
@@ -61,11 +56,8 @@ function optimizeRoute(tasks: Task[], startLat: number, startLng: number): Task[
     remaining.forEach((task, index) => {
       if (!task.latitude || !task.longitude) return;
       const distance = calculateDistance(currentLat, currentLng, task.latitude, task.longitude);
-      const timeBonus = new Date(task.scheduled_time).getHours() < 12 ? -0.5 : 0;
-      const adjustedDistance = distance + timeBonus;
-
-      if (adjustedDistance < minDistance) {
-        minDistance = adjustedDistance;
+      if (distance < minDistance) {
+        minDistance = distance;
         nearestIndex = index;
       }
     });
@@ -97,36 +89,29 @@ export default function MapPage() {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [orderedTasks, setOrderedTasks] = useState<Task[]>([]);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [map, setMap] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [draggedTaskIndex, setDraggedTaskIndex] = useState<number | null>(null);
-  const [etas, setEtas] = useState<Map<string, Date>>(new Map());
   const [traceLine, setTraceLine] = useState<any>(null);
   const [showTrace, setShowTrace] = useState(true);
-  const [hasNotifiedProximity, setHasNotifiedProximity] = useState<Set<string>>(new Set());
+  const [etas, setEtas] = useState<Map<string, Date>>(new Map());
 
-  // Следующая активная задача
   const nextTask = useMemo(() => {
     return orderedTasks.find(t => t.status !== "delivered");
   }, [orderedTasks]);
 
-  // Статистика
   const stats = useMemo(() => {
     const total = tasks.length;
     const delivered = tasks.filter(t => t.status === "delivered").length;
     const inProgress = tasks.filter(t => t.status === "in_progress").length;
     const pending = tasks.filter(t => t.status === "pending").length;
-    const progress = total > 0 ? (delivered / total) * 100 : 0;
     const totalDistance = userLocation 
       ? calculateTotalDistance(orderedTasks, userLocation.lat, userLocation.lng)
       : 0;
-    return { total, delivered, inProgress, pending, progress, totalDistance };
+    return { total, delivered, inProgress, pending, totalDistance };
   }, [tasks, orderedTasks, userLocation]);
 
-  // Загрузка задач
   const loadTasks = useCallback(async () => {
     if (!user?.id) return;
     try {
@@ -143,7 +128,6 @@ export default function MapPage() {
     }
   }, [user?.id, orderedTasks.length]);
 
-  // Расчёт ETA
   useEffect(() => {
     if (userLocation && orderedTasks.length > 0) {
       const calculatedEtas = routeService.calculateETAs(
@@ -155,7 +139,6 @@ export default function MapPage() {
     }
   }, [orderedTasks, userLocation]);
 
-  // Загрузка Яндекс.Карт
   useEffect(() => {
     const script = document.createElement("script");
     script.src = `https://api-maps.yandex.ru/2.1/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY}&lang=ru_RU`;
@@ -164,7 +147,6 @@ export default function MapPage() {
     document.head.appendChild(script);
   }, []);
 
-  // Инициализация
   useEffect(() => {
     if (!user?.id) return;
     loadTasks();
@@ -172,11 +154,9 @@ export default function MapPage() {
     return () => unsubscribe();
   }, [user?.id, loadTasks]);
 
-  // Геолокация и история перемещений
   useEffect(() => {
     if (!user?.id) return;
     
-    // Загружаем историю за сегодня
     const loadTrace = async () => {
       const history = await routeService.getTodayLocationHistory(user.id);
       if (history.length > 0 && map) {
@@ -190,20 +170,15 @@ export default function MapPage() {
           const { latitude, longitude, speed } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           
-          // Сохраняем в историю
           await locationService.updateLocation(user.id, latitude, longitude);
           await routeService.addLocationToHistory(user.id, latitude, longitude, speed || 0);
           
           if (map) loadTrace();
 
-          // Проверка близости к следующей точке
           if (nextTask && nextTask.latitude && nextTask.longitude) {
             const distance = calculateDistance(latitude, longitude, nextTask.latitude, nextTask.longitude);
-            if (distance < 0.2 && !hasNotifiedProximity.has(nextTask.id)) {
-              toast.success(`🎯 Вы приближаетесь к точке доставки: ${nextTask.address}`, {
-                duration: 5000,
-              });
-              setHasNotifiedProximity(prev => new Set(prev).add(nextTask.id));
+            if (distance < 0.2) {
+              toast.success(`🎯 Вы приближаетесь к точке: ${nextTask.address}`, { duration: 5000 });
             }
           }
         },
@@ -212,9 +187,8 @@ export default function MapPage() {
       );
       return () => navigator.geolocation.clearWatch(watchId);
     }
-  }, [user?.id, map, nextTask, hasNotifiedProximity]);
+  }, [user?.id, map, nextTask]);
 
-  // Инициализация карты
   useEffect(() => {
     if (!isMapLoaded || map) return;
     const initialCenter = userLocation ? [userLocation.lat, userLocation.lng] : [55.751244, 37.618423];
@@ -226,7 +200,6 @@ export default function MapPage() {
     setMap(ymap);
   }, [isMapLoaded, map, userLocation]);
 
-  // Отрисовка следа
   const drawTrace = (history: any[]) => {
     if (!map) return;
     
@@ -248,18 +221,15 @@ export default function MapPage() {
     setTraceLine(polyline);
   };
 
-  // Отрисовка меток и маршрута
   useEffect(() => {
     if (!map || !orderedTasks.length) return;
 
-    // Очищаем старые объекты (кроме следа)
     const objectsToRemove: any[] = [];
     map.geoObjects.each((obj: any) => {
       if (obj !== traceLine) objectsToRemove.push(obj);
     });
     objectsToRemove.forEach(obj => map.geoObjects.remove(obj));
 
-    // Метка курьера
     if (userLocation) {
       const userPlacemark = new window.ymaps.Placemark(
         [userLocation.lat, userLocation.lng],
@@ -269,7 +239,6 @@ export default function MapPage() {
       map.geoObjects.add(userPlacemark);
     }
 
-    // Метки задач
     let prevCoords = userLocation ? [userLocation.lat, userLocation.lng] : null;
 
     orderedTasks.forEach((task, index) => {
@@ -286,13 +255,13 @@ export default function MapPage() {
             <div class="p-2 min-w-[200px]">
               <h3 class="font-bold mb-2">${index + 1}. ${task.address}</h3>
               <p>📦 ${task.boxes_count} кор.</p>
-              <p>⏰ План: ${formatTime(task.scheduled_time)}</p>
+              <p>⏰ План: ${new Date(task.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
               ${eta ? `<p class="${isLate ? 'text-red-500 font-bold' : 'text-green-600'}">
-                🏁 ETA: ${formatTime(eta.toISOString())}
+                🏁 ETA: ${eta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>` : ''}
             </div>
           `,
-          iconCaption: `${index + 1}. ${formatTime(task.scheduled_time)}`
+          iconCaption: `${index + 1}`
         },
         {
           preset: task.status === "delivered" ? "islands#greenCircleIcon" : 
@@ -301,10 +270,8 @@ export default function MapPage() {
         }
       );
 
-      placemark.events.add("click", () => setSelectedTask(task));
       map.geoObjects.add(placemark);
 
-      // Линии маршрута
       if (prevCoords && task.status !== "delivered") {
         const polyline = new window.ymaps.Polyline([prevCoords, coords], {}, {
           strokeColor: "#3b82f6",
@@ -315,9 +282,8 @@ export default function MapPage() {
         prevCoords = coords;
       }
     });
-  }, [map, orderedTasks, userLocation, etas, traceLine, showTrace]);
+  }, [map, orderedTasks, userLocation, etas, traceLine]);
 
-  // Действия
   const handleOptimize = () => {
     if (!userLocation) return toast.error("Нет геопозиции");
     setIsOptimizing(true);
@@ -334,13 +300,7 @@ export default function MapPage() {
   const handleSaveRoute = async () => {
     if (!user?.id) return;
     const taskIds = orderedTasks.map(t => t.id);
-    await routeService.saveRoute(
-      user.id, 
-      taskIds, 
-      stats.totalDistance, 
-      0,
-      true
-    );
+    await routeService.saveRoute(user.id, taskIds, stats.totalDistance, 0, true);
     toast.success("Маршрут сохранён как лучший!");
   };
 
@@ -373,39 +333,21 @@ export default function MapPage() {
     toast.success("Открываю навигацию в Яндекс.Картах");
   };
 
-  // Drag & Drop
-  const handleDragStart = (index: number) => setDraggedTaskIndex(index);
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-  const handleDrop = (dropIndex: number) => {
-    if (draggedTaskIndex === null || draggedTaskIndex === dropIndex) return;
-    const newTasks = [...orderedTasks];
-    const [dragged] = newTasks.splice(draggedTaskIndex, 1);
-    newTasks.splice(dropIndex, 0, dragged);
-    setOrderedTasks(newTasks);
-    setDraggedTaskIndex(null);
-  };
-
-  const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
   return (
     <Layout title="Карта доставок">
-      <div className="space-y-6 p-4">
-        {/* Заголовок */}
+      <div className="space-y-4 p-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">🗺️ Карта доставок</h1>
-            <p className="text-muted-foreground text-sm">Построение и оптимизация маршрута</p>
+            <h1 className="text-2xl font-bold">🗺️ Карта доставок</h1>
+            <p className="text-sm text-muted-foreground">Построение маршрута</p>
           </div>
         </div>
 
-        {/* Предупреждения */}
         {!userLocation && (
           <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
             <MapPin className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800 dark:text-amber-200">
-              ⚠️ Разрешите доступ к геолокации для построения маршрута
+              ⚠️ Разрешите доступ к геолокации
             </AlertDescription>
           </Alert>
         )}
@@ -414,113 +356,87 @@ export default function MapPage() {
           <Alert>
             <Package className="h-4 w-4" />
             <AlertDescription>
-              На сегодня нет заданий. Проверьте вкладку "Маршрутный лист"
+              На сегодня нет заданий
             </AlertDescription>
           </Alert>
         )}
 
-        {/* СЛЕДУЮЩАЯ ДОСТАВКА - ГЛАВНАЯ КАРТОЧКА */}
         {nextTask && (
-          <Card className="border-2 border-green-500 shadow-lg">
+          <Card className="border-2 border-green-500">
             <CardHeader className="pb-3 bg-green-50 dark:bg-green-950">
-              <CardTitle className="text-xl flex items-center gap-2 text-green-700 dark:text-green-300">
-                <Navigation className="h-6 w-6" />
+              <CardTitle className="text-lg flex items-center gap-2 text-green-700 dark:text-green-300">
+                <Navigation className="h-5 w-5" />
                 🎯 Следующая доставка
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 pt-4">
+            <CardContent className="space-y-3 pt-4">
               <div className="flex items-start gap-3">
-                <MapPin className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="font-bold text-lg">{nextTask.address}</p>
-                  <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                    <span>⏰ {formatTime(nextTask.scheduled_time)}</span>
+                <MapPin className="h-5 w-5 text-green-600 mt-1" />
+                <div>
+                  <p className="font-bold">{nextTask.address}</p>
+                  <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
+                    <span>⏰ {new Date(nextTask.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     <span>📦 {nextTask.boxes_count} кор.</span>
                   </div>
                   {etas.get(nextTask.id) && (
-                    <p className="text-sm text-green-600 font-medium mt-2 flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      Прибытие: {formatTime(etas.get(nextTask.id)!.toISOString())}
+                    <p className="text-sm text-green-600 font-medium mt-1">
+                      🏁 Прибытие: {etas.get(nextTask.id)!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
                 </div>
               </div>
               
-              {/* ГЛАВНАЯ КНОПКА НАВИГАЦИИ */}
               <Button 
                 onClick={handleNavigateToNext} 
-                className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700" 
-                size="lg"
+                className="w-full h-12 text-base font-bold bg-green-600 hover:bg-green-700" 
                 disabled={!userLocation}
               >
-                <Navigation className="mr-2 h-6 w-6" />
-                🧭 Построить маршрут в Яндекс.Картах
+                <Navigation className="mr-2 h-5 w-5" />
+                🧭 Построить маршрут
               </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Статистика */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="p-4 border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-2 mb-2">
-              <RouteIcon className="h-5 w-5 text-blue-500" />
-              <span className="text-sm text-muted-foreground">Дистанция</span>
-            </div>
-            <p className="text-2xl font-bold">{stats.totalDistance.toFixed(1)} км</p>
+          <Card className="p-3">
+            <div className="text-xs text-muted-foreground mb-1">Дистанция</div>
+            <p className="text-xl font-bold">{stats.totalDistance.toFixed(1)} км</p>
           </Card>
           
-          <Card className="p-4 border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-sm text-muted-foreground">Готово</span>
-            </div>
-            <p className="text-2xl font-bold">{stats.delivered} / {stats.total}</p>
+          <Card className="p-3">
+            <div className="text-xs text-muted-foreground mb-1">Готово</div>
+            <p className="text-xl font-bold">{stats.delivered} / {stats.total}</p>
           </Card>
 
-          <Card className="p-4 border-orange-200 dark:border-orange-800">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-5 w-5 text-orange-500" />
-              <span className="text-sm text-muted-foreground">В пути</span>
-            </div>
-            <p className="text-2xl font-bold">{stats.inProgress}</p>
+          <Card className="p-3">
+            <div className="text-xs text-muted-foreground mb-1">В пути</div>
+            <p className="text-xl font-bold">{stats.inProgress}</p>
           </Card>
 
-          <Card className="p-4 border-red-200 dark:border-red-800">
-            <div className="flex items-center gap-2 mb-2">
-              <Package className="h-5 w-5 text-red-500" />
-              <span className="text-sm text-muted-foreground">Ожидает</span>
-            </div>
-            <p className="text-2xl font-bold">{stats.pending}</p>
+          <Card className="p-3">
+            <div className="text-xs text-muted-foreground mb-1">Ожидает</div>
+            <p className="text-xl font-bold">{stats.pending}</p>
           </Card>
         </div>
 
-        {/* Управление маршрутом */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Управление маршрутом
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Оптимизация и сохранение маршрутов
-            </CardDescription>
+            <CardTitle className="text-base">Управление</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
             <Button 
               onClick={handleOptimize} 
               disabled={isOptimizing || !userLocation}
               variant="default"
-              className="w-full"
             >
               <Zap className="mr-2 h-4 w-4" />
-              {isOptimizing ? "Оптимизация..." : "⚡ Оптимизировать"}
+              ⚡ Оптимизировать
             </Button>
             
             <Button 
               onClick={handleLoadBestRoute} 
               variant="outline"
-              className="w-full"
             >
               <TrendingUp className="mr-2 h-4 w-4" />
               📈 Лучший
@@ -529,7 +445,6 @@ export default function MapPage() {
             <Button 
               onClick={handleSaveRoute}
               variant="outline"
-              className="w-full"
             >
               <Save className="mr-2 h-4 w-4" />
               💾 Сохранить
@@ -538,84 +453,19 @@ export default function MapPage() {
             <Button 
               onClick={() => setShowTrace(!showTrace)}
               variant="outline"
-              className="w-full"
             >
               {showTrace ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
-              {showTrace ? "👁️ След" : "Показать след"}
+              {showTrace ? "👁️ След" : "Скрыть"}
             </Button>
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          {/* Карта */}
-          <Card className="lg:col-span-2 overflow-hidden border-2">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base font-semibold">🗺️ Карта</CardTitle>
-            </CardHeader>
-            <div id="map-container" className="w-full h-[500px] bg-muted" />
-          </Card>
-
-          {/* Список точек */}
-          <Card className="h-[560px] flex flex-col">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4" />
-                Порядок доставки ({orderedTasks.length})
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Перетаскивайте для изменения порядка
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
-              {orderedTasks.map((task, index) => {
-                const eta = etas.get(task.id);
-                const isLate = eta && new Date(task.scheduled_time) < eta;
-                
-                return (
-                  <div
-                    key={task.id}
-                    draggable={task.status !== "delivered"}
-                    onDragStart={() => handleDragStart(index)}
-                    onDragOver={handleDragOver}
-                    onDrop={() => handleDrop(index)}
-                    className={`p-3 rounded-lg border text-sm transition-all ${
-                      task.status === "delivered" 
-                        ? "opacity-50 bg-muted" 
-                        : "bg-card hover:border-primary cursor-move hover:shadow-md"
-                    } ${selectedTask?.id === task.id ? "ring-2 ring-primary" : ""}`}
-                    onClick={() => {
-                      setSelectedTask(task);
-                      if (task.latitude && task.longitude) {
-                        map?.setCenter([task.latitude, task.longitude], 15);
-                      }
-                    }}
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="font-bold flex items-center gap-2">
-                        <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                          {index + 1}
-                        </span>
-                        {formatTime(task.scheduled_time)}
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {task.boxes_count} кор.
-                      </Badge>
-                    </div>
-                    
-                    <p className="truncate mb-1 text-xs">{task.address}</p>
-                    
-                    {eta && task.status !== "delivered" && (
-                      <div className={`flex items-center gap-1 text-xs ${isLate ? "text-red-500 font-medium" : "text-green-600"}`}>
-                        {isLate ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                        <span>ETA: {formatTime(eta.toISOString())}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="overflow-hidden">
+          <CardHeader className="py-3">
+            <CardTitle className="text-base">🗺️ Карта</CardTitle>
+          </CardHeader>
+          <div id="map-container" className="w-full h-[500px] bg-muted" />
+        </Card>
       </div>
     </Layout>
   );

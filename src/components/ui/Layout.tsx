@@ -6,8 +6,6 @@ import { Toaster } from "sonner";
 import { Loader2, LogOut, User, Map, History, Home, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
 
 interface LayoutProps {
   children: ReactNode;
@@ -34,7 +32,7 @@ export function Layout({ children, title = "Е.Д.С. Личный кабине�
 
   const navItems = [
     { icon: Home, label: "Дашборд", href: "/" },
-    { icon: Map, label: "Коробки", href: "/boxes" },
+    { icon: MapPin, label: "Коробки", href: "/boxes" },
     { icon: History, label: "История", href: "/history" },
     { icon: User, label: "Профиль", href: "/profile" },
   ];
