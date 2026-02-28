@@ -44,7 +44,7 @@ export default function NotificationsPage() {
         .limit(50);
 
       if (error) throw error;
-      setNotifications(data || []);
+      setNotifications((data as unknown as Notification[]) || []);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {
@@ -64,7 +64,7 @@ export default function NotificationsPage() {
           filter: `user_id=eq.${user?.id}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          setNotifications((prev) => [payload.new as unknown as Notification, ...prev]);
         }
       )
       .subscribe();

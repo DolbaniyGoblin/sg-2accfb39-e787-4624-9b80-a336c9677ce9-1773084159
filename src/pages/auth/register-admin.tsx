@@ -46,19 +46,22 @@ export default function RegisterAdmin() {
       // Регистрация
       const { user, error: authError } = await authService.signUp(
         formData.email,
-        formData.password,
-        formData.fullName,
-        formData.phone
+        formData.password
       );
 
-      if (authError) throw new Error(authError);
+      if (authError) throw new Error(authError.message);
       if (!user) throw new Error("Ошибка создания пользователя");
 
-      // Обновление роли через Supabase
+      // Обновление роли и данных через Supabase
       const { supabase } = await import("@/integrations/supabase/client");
       const { error: updateError } = await supabase
         .from("users")
-        .update({ role: targetRole })
+        .update({ 
+          role: targetRole,
+          full_name: formData.fullName,
+          phone: formData.phone,
+          status: 'active'
+        })
         .eq("id", user.id);
 
       if (updateError) throw new Error("Ошибка установки роли");
