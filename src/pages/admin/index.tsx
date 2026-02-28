@@ -230,7 +230,7 @@ export default function AdminDashboard() {
                 <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-4">
                     <Avatar>
-                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarImage src={user.photo_url || undefined} />
                       <AvatarFallback>{user.full_name?.[0] || "?"}</AvatarFallback>
                     </Avatar>
                     <div>

@@ -68,6 +68,7 @@ export type Database = {
           is_active: boolean | null
           latitude: number | null
           longitude: number | null
+          name: string | null
           notes: string | null
           updated_at: string | null
         }
@@ -81,6 +82,7 @@ export type Database = {
           is_active?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          name?: string | null
           notes?: string | null
           updated_at?: string | null
         }
@@ -94,6 +96,7 @@ export type Database = {
           is_active?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          name?: string | null
           notes?: string | null
           updated_at?: string | null
         }
@@ -218,7 +221,7 @@ export type Database = {
       tasks: {
         Row: {
           address: string
-          boxes_count: number | null
+          box_count: number | null
           client_name: string
           client_phone: string | null
           courier_id: string | null
@@ -236,7 +239,7 @@ export type Database = {
         }
         Insert: {
           address: string
-          boxes_count?: number | null
+          box_count?: number | null
           client_name: string
           client_phone?: string | null
           courier_id?: string | null
@@ -254,7 +257,7 @@ export type Database = {
         }
         Update: {
           address?: string
-          boxes_count?: number | null
+          box_count?: number | null
           client_name?: string
           client_phone?: string | null
           courier_id?: string | null
@@ -299,6 +302,7 @@ export type Database = {
           photo_url: string | null
           rating: number | null
           role: string | null
+          status: string | null
         }
         Insert: {
           created_at?: string | null
@@ -311,6 +315,7 @@ export type Database = {
           photo_url?: string | null
           rating?: number | null
           role?: string | null
+          status?: string | null
         }
         Update: {
           created_at?: string | null
@@ -323,6 +328,7 @@ export type Database = {
           photo_url?: string | null
           rating?: number | null
           role?: string | null
+          status?: string | null
         }
         Relationships: []
       }
