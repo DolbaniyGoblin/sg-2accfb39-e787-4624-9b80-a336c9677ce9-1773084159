@@ -4,6 +4,8 @@ export interface User {
   full_name: string;
   phone: string;
   photo_url: string | null;
+  role: "courier" | "dispatcher" | "admin";
+  status: "active" | "blocked";
   rating: number;
   experience_months: number;
   is_on_shift: boolean;

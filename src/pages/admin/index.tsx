@@ -14,6 +14,14 @@ import { StatsChart } from "@/components/analytics/StatsChart";
 import { CourierLeaderboard } from "@/components/analytics/CourierLeaderboard";
 import { dispatcherService } from "@/services/dispatcherService";
 
+// Extend the AuthContext user type or define a compatible one
+interface AdminUser {
+  id: string;
+  email?: string;
+  full_name?: string;
+  role?: "courier" | "dispatcher" | "admin";
+}
+
 interface User {
   id: string;
   email: string;
@@ -35,6 +43,9 @@ interface DashboardStats {
 
 export default function AdminPanel() {
   const { user } = useAuth();
+  // Cast user to include role for TS checks
+  const currentUser = user as unknown as AdminUser;
+  
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
@@ -52,24 +63,24 @@ export default function AdminPanel() {
 
   useEffect(() => {
     // Check access
-    if (user) {
-        if (user.role !== "admin") {
+    if (currentUser) {
+        if (currentUser.role !== "admin") {
             toast.error("Доступ запрещён");
             router.push("/");
             return;
         }
         loadData();
-    } else if (user === null) {
+    } else if (currentUser === null) {
         // Not logged in
         router.push("/auth/login");
     }
-  }, [user, router]);
+  }, [currentUser, router]);
 
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (currentUser?.role === "admin") {
       fetchAnalytics();
     }
-  }, [user, analyticsPeriod]);
+  }, [currentUser, analyticsPeriod]);
 
   const loadData = async () => {
     try {
