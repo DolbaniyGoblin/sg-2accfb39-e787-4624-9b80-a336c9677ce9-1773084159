@@ -15,6 +15,7 @@ import { locationService } from "@/services/locationService";
 import { TaskSwipeCard } from "@/components/TaskSwipeCard";
 import { notificationService } from "@/services/notificationService";
 import { confettiEffects } from "@/lib/confetti";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -65,6 +66,17 @@ export default function Dashboard() {
     } else {
       setLoading(false);
     }
+  }, [user]);
+
+  // Periodic refresh every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+    
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [user]);
 
   const fetchDashboardData = async () => {
@@ -164,10 +176,10 @@ export default function Dashboard() {
   if (loading) {
     return (
       <Layout title="Загрузка...">
-        <div className="p-4 space-y-4 animate-pulse">
-          <div className="h-20 bg-muted rounded-lg" />
-          <div className="h-40 bg-muted rounded-lg" />
-          <div className="h-40 bg-muted rounded-lg" />
+        <div className="p-4 space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       </Layout>
     );
@@ -193,14 +205,14 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <Card className="shadow-sm">
+          <Card className="shadow-sm hover-lift card-appear">
             <CardContent className="p-4 flex flex-col items-center text-center">
               <Package className="w-5 h-5 text-primary mb-2" />
               <span className="text-2xl font-bold">{stats.deliveredToday}/{stats.totalTasksToday}</span>
               <span className="text-xs text-muted-foreground">Коробок</span>
             </CardContent>
           </Card>
-          <Card className="shadow-sm">
+          <Card className="shadow-sm hover-lift card-appear">
             <CardContent className="p-4 flex flex-col items-center text-center">
               <TrendingUp className="w-5 h-5 text-green-600 mb-2" />
               <span className="text-2xl font-bold">{stats.earnedToday}₽</span>
@@ -254,17 +266,17 @@ export default function Dashboard() {
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
            <Link href="/route" className="block">
-            <Card className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+            <Card className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors hover-lift">
               <CardContent className="p-4 flex flex-col items-center justify-center h-full min-h-[100px]">
-                <MapPin className="w-8 h-8 mb-2" />
+                <MapPin className="w-8 h-8 mb-2 bounce-subtle" />
                 <span className="font-bold">Маршрут</span>
               </CardContent>
             </Card>
           </Link>
           <Link href="/boxes" className="block">
-            <Card className="bg-accent text-accent-foreground hover:bg-accent/90 transition-colors">
+            <Card className="bg-accent text-accent-foreground hover:bg-accent/90 transition-colors hover-lift">
               <CardContent className="p-4 flex flex-col items-center justify-center h-full min-h-[100px]">
-                <Package className="w-8 h-8 mb-2" />
+                <Package className="w-8 h-8 mb-2 bounce-subtle" />
                 <span className="font-bold">Мои коробки</span>
               </CardContent>
             </Card>

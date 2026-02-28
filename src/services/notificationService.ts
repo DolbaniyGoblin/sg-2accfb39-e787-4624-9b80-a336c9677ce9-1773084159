@@ -5,20 +5,49 @@ export const notificationService = {
   // Request permission for browser notifications
   async requestPermission(): Promise<boolean> {
     if (!("Notification" in window)) {
-      console.log("This browser does not support notifications");
+      console.log("This browser does not support desktop notification");
       return false;
     }
+    
+    const permission = await Notification.requestPermission();
+    return permission === "granted";
+  },
 
-    if (Notification.permission === "granted") {
-      return true;
+  // Show a notification
+  async show(options: { 
+    title: string; 
+    body: string; 
+    type?: "task" | "system" | "problem" | "achievement";
+    data?: any;
+  }) {
+    const { title, body, type = "system", data } = options;
+
+    // 1. Play sound
+    this.playSound(type === "achievement" ? "success" : type === "problem" ? "error" : "info");
+
+    // 2. Show browser notification
+    this.showNotification(title, {
+      body,
+      tag: type,
+      data
+    });
+
+    // 3. Save to database (if user is logged in)
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("notifications").insert({
+          user_id: user.id,
+          type,
+          title,
+          message: body,
+          data: data || {},
+          read: false
+        });
+      }
+    } catch (error) {
+      console.error("Error saving notification:", error);
     }
-
-    if (Notification.permission !== "denied") {
-      const permission = await Notification.requestPermission();
-      return permission === "granted";
-    }
-
-    return false;
   },
 
   // Show a notification
