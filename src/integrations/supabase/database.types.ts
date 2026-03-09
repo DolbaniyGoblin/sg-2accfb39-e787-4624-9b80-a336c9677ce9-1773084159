@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -381,7 +381,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_reset_user_password: {
+        Args: { new_password: string; user_email: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
