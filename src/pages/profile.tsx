@@ -48,14 +48,14 @@ export default function ProfilePage() {
     
     setIsLoading(true);
     try {
-      // Fetch user from database - explicit type annotation to bypass deep type inference
-      const { data: userData }: { data: any } = await (supabase as any)
+      // @ts-expect-error - Bypass excessively deep type instantiation error
+      const userResult = await supabase
         .from("users")
         .select("id, email, phone, full_name, role, rating, experience_months, photo_url, created_at")
         .eq("id", user.id)
         .single();
       
-      if (userData) setDbUser(userData);
+      if (userResult.data) setDbUser(userResult.data);
 
       // Fetch real statistics
       await fetchUserStats();
@@ -77,14 +77,14 @@ export default function ProfilePage() {
       const startOfDay = new Date(now.setHours(0, 0, 0, 0));
 
       // Total deliveries
-      const { count: totalCount } = await supabase
+      const { count: totalCount } = await (supabase as any)
         .from("deliveries")
         .select("id", { count: "exact", head: true })
         .eq("courier_id", user.id)
         .eq("status", "delivered");
 
       // Month deliveries
-      const { count: monthCount } = await supabase
+      const { count: monthCount } = await (supabase as any)
         .from("deliveries")
         .select("id", { count: "exact", head: true })
         .eq("courier_id", user.id)
@@ -92,7 +92,7 @@ export default function ProfilePage() {
         .gte("delivered_at", startOfMonth.toISOString());
 
       // Week deliveries
-      const { count: weekCount } = await supabase
+      const { count: weekCount } = await (supabase as any)
         .from("deliveries")
         .select("id", { count: "exact", head: true })
         .eq("courier_id", user.id)
@@ -100,7 +100,7 @@ export default function ProfilePage() {
         .gte("delivered_at", startOfWeek.toISOString());
 
       // Today deliveries
-      const { count: todayCount } = await supabase
+      const { count: todayCount } = await (supabase as any)
         .from("deliveries")
         .select("id", { count: "exact", head: true })
         .eq("courier_id", user.id)
