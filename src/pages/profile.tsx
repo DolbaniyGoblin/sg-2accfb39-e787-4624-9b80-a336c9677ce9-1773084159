@@ -48,10 +48,10 @@ export default function ProfilePage() {
     
     setIsLoading(true);
     try {
-      // Fetch user from database
-      const { data: userData } = await supabase
+      // Fetch user from database - cast to any to bypass deep type inference
+      const { data: userData } = await (supabase as any)
         .from("users")
-        .select("*")
+        .select("id, email, phone, full_name, role, rating, experience_months, photo_url, created_at")
         .eq("id", user.id)
         .single();
       
