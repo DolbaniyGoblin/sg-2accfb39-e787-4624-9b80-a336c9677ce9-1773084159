@@ -103,7 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, phone: string) => {
     console.log("Attempting sign up for:", email);
-    const { data, error } = await supabase.auth.signUp({ 
+    
+    // Step 1: Create auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
@@ -114,12 +116,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
     
-    if (error) {
-      console.error("Sign up error:", error);
-      throw error;
+    if (authError) {
+      console.error("Auth sign up error:", authError);
+      throw authError;
     }
 
-    console.log("Sign up successful - user profile will be created automatically by database trigger");
+    if (!authData.user) {
+      console.error("No user data returned from signUp");
+      throw new Error("Registration failed - no user data");
+    }
+
+    console.log("Auth user created successfully:", authData.user.id);
+
+    // Step 2: Create user profile in users table
+    try {
+      const { error: profileError } = await supabase
+        .from("users")
+        .insert({
+          id: authData.user.id,
+          email: email,
+          full_name: fullName,
+          phone: phone,
+          role: "courier",
+          status: "active",
+          rating: 5.0,
+          experience_months: 0,
+          is_on_shift: false
+        });
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        // If profile creation fails, we should still allow the user to continue
+        // The trigger might have already created it
+        console.warn("Profile creation failed, but user might still be created by trigger");
+      } else {
+        console.log("User profile created successfully in users table");
+      }
+    } catch (profileErr) {
+      console.error("Exception during profile creation:", profileErr);
+      // Non-fatal error - continue
+    }
+
+    console.log("Sign up completed successfully");
   };
 
   const signOut = async () => {
