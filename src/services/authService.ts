@@ -34,7 +34,7 @@ const getURL = () => {
 }
 
 export const authService = {
-  // Get current user
+  // Get current user - now works directly with auth.users
   async getCurrentUser(): Promise<AuthUser | null> {
     const { data: { user } } = await supabase.auth.getUser();
     return user ? {
@@ -51,14 +51,21 @@ export const authService = {
     return session;
   },
 
-  // Sign up with email and password
-  async signUp(email: string, password: string): Promise<{ user: AuthUser | null; error: AuthError | null }> {
+  // Sign up with email and password - stores role in user_metadata
+  async signUp(email: string, password: string, metadata?: { full_name?: string; phone?: string; role?: string }): Promise<{ user: AuthUser | null; error: AuthError | null }> {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${getURL()}auth/confirm-email`
+          emailRedirectTo: `${getURL()}auth/confirm-email`,
+          data: {
+            full_name: metadata?.full_name || "",
+            phone: metadata?.phone || "",
+            role: metadata?.role || "courier",
+            rating: 5.0,
+            experience_months: 0
+          }
         }
       });
 
