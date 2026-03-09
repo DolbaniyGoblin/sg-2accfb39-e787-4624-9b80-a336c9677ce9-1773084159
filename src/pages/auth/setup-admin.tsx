@@ -133,6 +133,12 @@ export default function SetupAdmin() {
               <li>3. Секретный код из <code className="text-purple-400">.env.local</code>: <code className="text-purple-400">your-super-secret-key-12345</code></li>
               <li>4. После успеха → войдите на <code className="text-purple-400">/auth/login</code></li>
             </ol>
+            <p className="text-sm text-muted-foreground mt-2">
+              Секретный код из переменной окружения
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 font-mono bg-muted p-2 rounded">
+              your-super-secret-key-12345
+            </p>
           </div>
 
           <div className="mt-4 text-center">

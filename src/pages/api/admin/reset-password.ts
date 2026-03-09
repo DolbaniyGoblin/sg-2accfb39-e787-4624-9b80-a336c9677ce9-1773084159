@@ -9,24 +9,31 @@ type ResponseData = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ResponseData>
+  res: NextApiResponse
 ) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { email, newPassword, secretCode } = req.body;
-
-  // Простая защита - секретный ключ для доступа к этому endpoint
-  if (secretCode !== process.env.ADMIN_RESET_SECRET) {
-    return res.status(403).json({ error: "Unauthorized: Invalid secret code" });
-  }
-
-  if (!email || !newPassword) {
-    return res.status(400).json({ error: "Email and newPassword are required" });
-  }
-
   try {
+    // Log environment variables for debugging
+    console.log("=== API Reset Password Debug ===");
+    console.log("SUPABASE_URL exists:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log("SERVICE_ROLE_KEY exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log("ADMIN_SECRET exists:", !!process.env.ADMIN_RESET_SECRET);
+    console.log("SERVICE_ROLE_KEY length:", process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0);
+
+    const { email, newPassword, secretCode } = req.body;
+
+    // Простая защита - секретный ключ для доступа к этому endpoint
+    if (secretCode !== process.env.ADMIN_RESET_SECRET) {
+      return res.status(403).json({ error: "Unauthorized: Invalid secret code" });
+    }
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ error: "Email and newPassword are required" });
+    }
+
     // Создаём Supabase Admin Client с service_role ключом
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
