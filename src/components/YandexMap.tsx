@@ -38,7 +38,7 @@ export function YandexMap({
   useEffect(() => {
     // Load Yandex Maps script dynamically
     const script = document.createElement("script");
-    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_KEY || ""}&lang=ru_RU`;
+    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY || ""}&lang=ru_RU`;
     script.async = true;
     script.onload = () => {
       setYmaps((window as any).ymaps);
