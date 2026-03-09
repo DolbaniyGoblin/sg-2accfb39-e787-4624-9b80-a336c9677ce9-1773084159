@@ -6,14 +6,16 @@ import { MapPin, Package, Clock, Phone, Navigation } from "lucide-react";
 import { Task } from "@/types";
 import { formatTime } from "@/lib/utils";
 import { useState } from "react";
+import type React from "react";
 
 interface TaskSwipeCardProps {
   task: Task;
   onSwipeRight: (task: Task) => void; // Start/Complete
   onSwipeLeft: (task: Task) => void;  // Problem/Skip
+  style?: React.CSSProperties;
 }
 
-export function TaskSwipeCard({ task, onSwipeRight, onSwipeLeft }: TaskSwipeCardProps) {
+export function TaskSwipeCard({ task, onSwipeRight, onSwipeLeft, style }: TaskSwipeCardProps) {
   const x = useMotionValue(0);
   
   // All hooks must be at the top level
@@ -52,6 +54,7 @@ export function TaskSwipeCard({ task, onSwipeRight, onSwipeLeft }: TaskSwipeCard
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={handleDragEnd}
       style={{
+        ...style,
         x,
         rotate,
         opacity,

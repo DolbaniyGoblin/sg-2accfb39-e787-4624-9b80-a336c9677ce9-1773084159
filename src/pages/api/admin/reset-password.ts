@@ -62,12 +62,12 @@ export default async function handler(
     // Get user by email first
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
     
-    if (userError) {
+    if (userError || !userData) {
       console.error("Error listing users:", userError);
-      return res.status(500).json({ error: "Failed to list users", details: userError.message });
+      return res.status(500).json({ error: "Failed to list users", details: userError?.message || "Unknown error" });
     }
 
-    const user = userData.users.find(u => u.email === email);
+    const user = userData.users.find((u: any) => u.email === email);
     
     if (!user) {
       console.error("User not found:", email);
