@@ -111,15 +111,15 @@ export default function ProfilePage() {
       const monthEarnings = (monthCount || 0) * 150;
 
       // Calculate total distance from saved routes
-      const { data: routes } = await supabase
+      const { data: routes } = await (supabase as any)
         .from("saved_routes")
         .select("total_distance")
         .eq("courier_id", user.id);
 
-      const totalDistance = routes?.reduce((sum, r) => sum + (r.total_distance || 0), 0) || 0;
+      const totalDistance = routes?.reduce((sum: number, r: any) => sum + (r.total_distance || 0), 0) || 0;
 
       // Calculate on-time percentage
-      const { data: tasksData } = await supabase
+      const { data: tasksData } = await (supabase as any)
         .from("tasks")
         .select("scheduled_time, updated_at")
         .eq("courier_id", user.id)
