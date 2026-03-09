@@ -48,8 +48,8 @@ export default function ProfilePage() {
     
     setIsLoading(true);
     try {
-      // Fetch user from database - cast to any to bypass deep type inference
-      const { data: userData } = await (supabase as any)
+      // Fetch user from database - explicit type annotation to bypass deep type inference
+      const { data: userData }: { data: any } = await (supabase as any)
         .from("users")
         .select("id, email, phone, full_name, role, rating, experience_months, photo_url, created_at")
         .eq("id", user.id)
