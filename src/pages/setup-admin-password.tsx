@@ -11,12 +11,13 @@ export default function SetupAdminPassword() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  const handleSetup = async () => {
+  const handleSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setResult(null);
 
     try {
-      const response = await fetch("/api/admin/reset-password", {
+      const response = await fetch("/api/test-reset-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
