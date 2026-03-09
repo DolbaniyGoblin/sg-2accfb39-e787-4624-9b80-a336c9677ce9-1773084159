@@ -28,7 +28,6 @@ export default function LoginPage() {
       
       toast.success("Вход выполнен успешно");
       
-      // Небольшая задержка для синхронизации сессии
       await new Promise(resolve => setTimeout(resolve, 500));
       
       console.log("Redirecting to home page...");
@@ -72,7 +71,12 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Пароль</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Пароль</Label>
+                <Link href="/auth/forgot-password" className="text-xs text-primary hover:underline">
+                  Забыли пароль?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
