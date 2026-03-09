@@ -65,7 +65,8 @@ export async function middleware(request: NextRequest) {
     "/auth/reset-password",
     "/auth/setup-admin",
     "/setup-admin-password",
-    "/api/admin/reset-password"
+    "/api/admin/reset-password",
+    "/api/test-reset-password"
   ];
   const isPublicRoute = publicPaths.some(route => request.nextUrl.pathname.startsWith(route));
 
