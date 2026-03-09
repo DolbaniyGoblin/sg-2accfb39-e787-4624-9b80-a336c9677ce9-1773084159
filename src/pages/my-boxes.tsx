@@ -58,13 +58,34 @@ export default function MyBoxes() {
     try {
       const { data, error } = await supabase
         .from('my_boxes')
-        .select('*')
+        .select(`
+          *,
+          tasks:task_id (*)
+        `)
         .eq('courier_id', user.id)
-        .eq('status', 'in_transit')
-        .order('expected_delivery', { ascending: true });
+        .eq('status', 'in_transit');
 
       if (error) throw error;
-      setBoxes(data || []);
+      
+      const formattedBoxes: MyBox[] = (data || []).map((box: any) => {
+        const task = Array.isArray(box.tasks) ? box.tasks[0] : box.tasks;
+        return {
+          id: box.id,
+          task_id: box.task_id,
+          tracking_number: `BOX-${box.id.substring(0, 6).toUpperCase()}`,
+          pickup_address: "Главный склад",
+          delivery_address: task?.address || "Нет адреса",
+          recipient_name: task?.client_name || "Клиент",
+          recipient_phone: task?.client_phone || "",
+          boxes_count: box.box_count || 1,
+          status: box.status,
+          picked_up_at: box.picked_up_at,
+          expected_delivery: task?.scheduled_time || box.picked_up_at,
+          notes: box.notes
+        };
+      });
+      
+      setBoxes(formattedBoxes);
     } catch (error) {
       console.error("Error fetching boxes:", error);
       toast.error("Ошибка загрузки коробок");
