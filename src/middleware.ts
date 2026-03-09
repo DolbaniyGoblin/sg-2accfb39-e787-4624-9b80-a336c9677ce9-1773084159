@@ -57,8 +57,16 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   // Public routes
-  const publicRoutes = ["/auth/login", "/auth/register"];
-  const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname.startsWith(route));
+  const publicPaths = [
+    "/auth/login",
+    "/auth/register",
+    "/auth/register-admin",
+    "/auth/forgot-password",
+    "/auth/reset-password",
+    "/auth/setup-admin",
+    "/api/admin/reset-password"
+  ];
+  const isPublicRoute = publicPaths.some(route => request.nextUrl.pathname.startsWith(route));
 
   if (!session && !isPublicRoute) {
     const redirectUrl = new URL("/auth/login", request.url);

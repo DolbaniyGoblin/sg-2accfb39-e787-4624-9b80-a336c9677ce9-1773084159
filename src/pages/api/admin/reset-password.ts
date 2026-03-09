@@ -15,11 +15,11 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { email, newPassword, adminSecret } = req.body;
+  const { email, newPassword, secretCode } = req.body;
 
   // Простая защита - секретный ключ для доступа к этому endpoint
-  if (adminSecret !== process.env.ADMIN_RESET_SECRET) {
-    return res.status(403).json({ error: "Unauthorized" });
+  if (secretCode !== process.env.ADMIN_RESET_SECRET) {
+    return res.status(403).json({ error: "Unauthorized: Invalid secret code" });
   }
 
   if (!email || !newPassword) {
@@ -39,17 +39,19 @@ export default async function handler(
       }
     );
 
-    // Получаем пользователя по email
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    // Получаем список пользователей
+    const { data, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (listError) {
       throw listError;
     }
 
-    const user = users.users.find(u => u.email === email);
+    // В разных версиях Supabase JS API data может отличаться
+    const usersList = data?.users || [];
+    const user = usersList.find((u: any) => u.email === email);
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "User not found. Check the email address." });
     }
 
     // Сбрасываем пароль через Admin API
