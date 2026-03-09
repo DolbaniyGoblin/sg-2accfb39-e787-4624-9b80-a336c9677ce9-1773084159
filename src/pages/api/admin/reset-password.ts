@@ -22,6 +22,9 @@ export default async function handler(
     console.log("SERVICE_ROLE_KEY exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
     console.log("ADMIN_SECRET exists:", !!process.env.ADMIN_RESET_SECRET);
     console.log("SERVICE_ROLE_KEY length:", process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0);
+    console.log("SERVICE_ROLE_KEY starts with:", process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10));
+    console.log("SERVICE_ROLE_KEY ends with:", process.env.SUPABASE_SERVICE_ROLE_KEY?.substring((process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0) - 10));
+    console.log("SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
 
     const { email, newPassword, secretCode } = req.body;
 
