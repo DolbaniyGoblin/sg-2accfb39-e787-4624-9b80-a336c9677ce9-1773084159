@@ -79,14 +79,14 @@ export default function ProfilePage() {
       // Total deliveries
       const { count: totalCount } = await supabase
         .from("deliveries")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("courier_id", user.id)
         .eq("status", "delivered");
 
       // Month deliveries
       const { count: monthCount } = await supabase
         .from("deliveries")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("courier_id", user.id)
         .eq("status", "delivered")
         .gte("delivered_at", startOfMonth.toISOString());
@@ -94,7 +94,7 @@ export default function ProfilePage() {
       // Week deliveries
       const { count: weekCount } = await supabase
         .from("deliveries")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("courier_id", user.id)
         .eq("status", "delivered")
         .gte("delivered_at", startOfWeek.toISOString());
@@ -102,7 +102,7 @@ export default function ProfilePage() {
       // Today deliveries
       const { count: todayCount } = await supabase
         .from("deliveries")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("courier_id", user.id)
         .eq("status", "delivered")
         .gte("delivered_at", startOfDay.toISOString());
@@ -119,24 +119,23 @@ export default function ProfilePage() {
       const totalDistance = routes?.reduce((sum, r) => sum + (r.total_distance || 0), 0) || 0;
 
       // Calculate on-time percentage
-      const { data: deliveriesData } = await supabase
-        .from("deliveries")
-        .select("delivered_at, scheduled_time")
+      const { data: tasksData } = await supabase
+        .from("tasks")
+        .select("scheduled_time, updated_at")
         .eq("courier_id", user.id)
-        .eq("status", "delivered")
-        .gte("delivered_at", startOfMonth.toISOString());
+        .eq("status", "delivered");
 
       let onTimeCount = 0;
-      deliveriesData?.forEach(d => {
-        if (d.delivered_at && d.scheduled_time) {
-          const deliveredTime = new Date(d.delivered_at);
-          const scheduledTime = new Date(d.scheduled_time);
+      tasksData?.forEach((t: any) => {
+        if (t.updated_at && t.scheduled_time) {
+          const deliveredTime = new Date(t.updated_at);
+          const scheduledTime = new Date(t.scheduled_time);
           if (deliveredTime <= scheduledTime) onTimeCount++;
         }
       });
 
-      const onTimePercent = deliveriesData && deliveriesData.length > 0
-        ? Math.round((onTimeCount / deliveriesData.length) * 100)
+      const onTimePercent = tasksData && tasksData.length > 0
+        ? Math.round((onTimeCount / tasksData.length) * 100)
         : 100;
 
       setStats({
