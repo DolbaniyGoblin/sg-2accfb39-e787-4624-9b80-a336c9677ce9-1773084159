@@ -212,13 +212,13 @@ export default function DispatcherDashboard() {
                   <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <p className="font-medium">{task.address}</p>
-                      <p className="text-sm text-muted-foreground">📦 {task.box_count} коробок</p>
+                      <p className="text-sm text-muted-foreground">📦 {task.boxes_count} коробок</p>
                     </div>
                     <Badge variant={
-                      task.status === "completed" ? "default" :
+                      task.status === "delivered" ? "default" :
                       task.status === "in_progress" ? "secondary" : "outline"
                     }>
-                      {task.status === "completed" ? "✅ Готово" :
+                      {task.status === "delivered" ? "✅ Готово" :
                        task.status === "in_progress" ? "🚚 В пути" : "⏳ Ожидает"}
                     </Badge>
                   </div>
