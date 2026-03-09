@@ -146,6 +146,44 @@ export type Database = {
         }
         Relationships: []
       }
+      my_boxes: {
+        Row: {
+          box_count: number
+          courier_id: string
+          id: string
+          notes: string | null
+          picked_up_at: string | null
+          status: string
+          task_id: string | null
+        }
+        Insert: {
+          box_count: number
+          courier_id: string
+          id?: string
+          notes?: string | null
+          picked_up_at?: string | null
+          status?: string
+          task_id?: string | null
+        }
+        Update: {
+          box_count?: number
+          courier_id?: string
+          id?: string
+          notes?: string | null
+          picked_up_at?: string | null
+          status?: string
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "my_boxes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
