@@ -48,7 +48,6 @@ export default function ProfilePage() {
     
     setIsLoading(true);
     try {
-      // @ts-expect-error - Bypass excessively deep type instantiation error
       const userResult = await supabase
         .from("users")
         .select("id, email, phone, full_name, role, rating, experience_months, photo_url, created_at")
