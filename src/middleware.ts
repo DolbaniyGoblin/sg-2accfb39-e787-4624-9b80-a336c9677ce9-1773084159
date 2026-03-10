@@ -2,6 +2,8 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  console.log("🔐 Middleware: Processing request for:", request.nextUrl.pathname);
+  
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -55,6 +57,7 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { session } } = await supabase.auth.getSession();
+  console.log("🔐 Middleware: Session exists:", !!session);
 
   // Public routes
   const publicPaths = [
@@ -69,19 +72,23 @@ export async function middleware(request: NextRequest) {
     "/api/test-reset-password"
   ];
   const isPublicRoute = publicPaths.some(route => request.nextUrl.pathname.startsWith(route));
+  console.log("🔐 Middleware: Is public route:", isPublicRoute);
 
   if (!session && !isPublicRoute) {
+    console.log("🔐 Middleware: No session, redirecting to login");
     const redirectUrl = new URL("/auth/login", request.url);
     redirectUrl.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
   if (session && isPublicRoute) {
+    console.log("🔐 Middleware: Session exists on public route, redirecting to home");
     return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Role-based access
   if (session) {
+    console.log("🔐 Middleware: Checking user role for protected routes");
     const { data: user } = await supabase
       .from("users")
       .select("role")
@@ -89,16 +96,19 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (request.nextUrl.pathname.startsWith("/admin") && user?.role !== "admin") {
+      console.log("🔐 Middleware: Non-admin trying to access admin route");
       return NextResponse.redirect(new URL("/", request.url));
     }
 
     if (request.nextUrl.pathname.startsWith("/dispatcher") && 
         user?.role !== "dispatcher" && 
         user?.role !== "admin") {
+      console.log("🔐 Middleware: Non-dispatcher trying to access dispatcher route");
       return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
+  console.log("🔐 Middleware: Allowing request to proceed");
   return response;
 }
 
