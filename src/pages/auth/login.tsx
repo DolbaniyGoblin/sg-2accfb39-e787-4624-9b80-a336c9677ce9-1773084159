@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -7,39 +7,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Truck, Loader2 } from "lucide-react";
+import { Truck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
   const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    console.log("LoginPage: Checking if user is already logged in...", { user });
+    if (user) {
+      console.log("LoginPage: User already logged in, redirecting to home...");
+      router.push("/");
+    }
+  }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("LoginPage: Form submitted", { email });
     setIsLoading(true);
 
     try {
-      console.log("Starting sign in process...");
-      await signIn(email, password);
-      console.log("Sign in completed, attempting redirect...");
+      console.log("LoginPage: Calling signIn...");
+      const result = await signIn(email, password);
+      console.log("LoginPage: signIn result:", result);
       
       toast.success("Вход выполнен успешно");
       
+      console.log("LoginPage: Waiting 500ms before redirect...");
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      console.log("Redirecting to home page...");
+      console.log("LoginPage: Redirecting to home page...");
       await router.push("/");
-      console.log("Redirect completed");
+      console.log("LoginPage: Redirect completed");
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("LoginPage: Login error:", error);
       toast.error(error.message || "Ошибка входа");
-    } finally {
       setIsLoading(false);
     }
   };
+
+  // Don't render form if user is already logged in
+  if (user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Перенаправление...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -68,6 +90,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -83,11 +106,18 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Войти
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Вход...
+                </>
+              ) : (
+                "Войти"
+              )}
             </Button>
           </form>
         </CardContent>
