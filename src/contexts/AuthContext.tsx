@@ -58,6 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     console.log("Database user data:", dbUser);
 
+    // Безопасное приведение статуса
+    let userStatus: "active" | "blocked" = "active";
+    if (dbUser?.status === "blocked") {
+      userStatus = "blocked";
+    }
+
     // Строим профиль пользователя
     const userProfile: User = {
       id: authUser.id,
@@ -65,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Приоритет: БД → метаданные → дефолты
       full_name: dbUser?.full_name || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Пользователь",
       role: (dbUser?.role || authUser.user_metadata?.role || "courier") as "courier" | "dispatcher" | "admin",
-      status: (dbUser?.status || "active") as const,
+      status: userStatus,
       phone: dbUser?.phone || authUser.user_metadata?.phone || authUser.phone || "",
       rating: dbUser?.rating || authUser.user_metadata?.rating || 5.0,
       experience_months: dbUser?.experience_months || authUser.user_metadata?.experience_months || 0,

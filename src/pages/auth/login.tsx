@@ -28,20 +28,20 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      console.log("🔐 LoginPage: Calling signIn...");
+      console.log("LoginPage: Calling signIn...");
       const result = await authService.signIn(email, password);
-      console.log("🔐 LoginPage: signIn result:", result);
-
+      console.log("LoginPage: signIn result:", result);
+      
       if (result.error) {
-        console.error("🔐 LoginPage: Sign in error:", result.error);
-        toast.error(result.error.message || "Ошибка входа");
-        setLoading(false);
-        return;
+        throw new Error(result.error.message);
       }
 
-      if (result.session) {
-        console.log("🔐 LoginPage: Sign in successful, session created");
-        toast.success("Вход выполнен!");
+      if (result.user) {
+        console.log("LoginPage: Sign in successful, redirecting...");
+        toast({
+          title: "Успешный вход",
+          description: "Перенаправляем в систему...",
+        });
         
         // Small delay to ensure session is saved
         setTimeout(() => {
