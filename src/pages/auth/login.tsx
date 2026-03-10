@@ -38,8 +38,7 @@ export default function LoginPage() {
 
       if (result.user) {
         console.log("LoginPage: Sign in successful, redirecting...");
-        toast({
-          title: "Успешный вход",
+        toast.success("Успешный вход", {
           description: "Перенаправляем в систему...",
         });
         
