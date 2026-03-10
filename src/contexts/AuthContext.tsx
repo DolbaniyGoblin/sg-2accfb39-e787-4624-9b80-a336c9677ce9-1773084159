@@ -42,22 +42,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const setUserFromAuthUser = (authUser: SupabaseUser) => {
+  const setUserFromAuthUser = async (authUser: SupabaseUser) => {
     console.log("Setting user from auth.users:", authUser);
     
-    // Получаем данные из auth.users (гарантированно работает)
+    // Попытка получить данные из таблицы users
+    const { data: dbUser, error } = await supabase
+      .from("users")
+      .select("role, full_name, phone, rating, experience_months, is_on_shift, photo_url, status")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching user from database:", error);
+    }
+
+    console.log("Database user data:", dbUser);
+
+    // Строим профиль пользователя
     const userProfile: User = {
       id: authUser.id,
       email: authUser.email || "",
-      full_name: authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Пользователь",
-      // Роль берём из метаданных (устанавливается при регистрации)
-      role: (authUser.user_metadata?.role || "courier") as "courier" | "dispatcher" | "admin",
-      status: "active" as const,
-      phone: authUser.user_metadata?.phone || authUser.phone || "",
-      rating: authUser.user_metadata?.rating || 5.0,
-      experience_months: authUser.user_metadata?.experience_months || 0,
-      is_on_shift: false,
-      photo_url: authUser.user_metadata?.photo_url || null,
+      // Приоритет: БД → метаданные → дефолты
+      full_name: dbUser?.full_name || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Пользователь",
+      role: (dbUser?.role || authUser.user_metadata?.role || "courier") as "courier" | "dispatcher" | "admin",
+      status: (dbUser?.status || "active") as const,
+      phone: dbUser?.phone || authUser.user_metadata?.phone || authUser.phone || "",
+      rating: dbUser?.rating || authUser.user_metadata?.rating || 5.0,
+      experience_months: dbUser?.experience_months || authUser.user_metadata?.experience_months || 0,
+      is_on_shift: dbUser?.is_on_shift || false,
+      photo_url: dbUser?.photo_url || authUser.user_metadata?.photo_url || null,
       created_at: authUser.created_at || new Date().toISOString()
     };
 
@@ -102,6 +115,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!authData.user) {
       console.error("No user data returned from signUp");
       throw new Error("Registration failed - no user data");
+    }
+
+    // Создаём запись в таблице users
+    const { error: dbError } = await supabase
+      .from("users")
+      .insert({
+        id: authData.user.id,
+        email: email,
+        full_name: fullName,
+        phone: phone,
+        role: "courier",
+        status: "active",
+        rating: 5.0,
+        experience_months: 0,
+        is_on_shift: false
+      });
+
+    if (dbError) {
+      console.error("Error creating user in database:", dbError);
+      // Не выбрасываем ошибку, т.к. auth пользователь уже создан
     }
 
     console.log("Sign up completed successfully:", authData.user.id);
