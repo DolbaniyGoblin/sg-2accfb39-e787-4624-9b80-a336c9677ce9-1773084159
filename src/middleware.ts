@@ -59,7 +59,7 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
   console.log("🔐 Middleware: Session exists:", !!session);
 
-  // Public routes
+  // Public routes that don't require authentication
   const publicPaths = [
     "/auth/login",
     "/auth/register",
@@ -74,6 +74,7 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicPaths.some(route => request.nextUrl.pathname.startsWith(route));
   console.log("🔐 Middleware: Is public route:", isPublicRoute);
 
+  // Redirect to login if not authenticated and trying to access protected route
   if (!session && !isPublicRoute) {
     console.log("🔐 Middleware: No session, redirecting to login");
     const redirectUrl = new URL("/auth/login", request.url);
@@ -81,12 +82,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (session && isPublicRoute) {
-    console.log("🔐 Middleware: Session exists on public route, redirecting to home");
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  // Role-based access
+  // Role-based access control for authenticated users
   if (session) {
     console.log("🔐 Middleware: Checking user role for protected routes");
     const { data: user } = await supabase
