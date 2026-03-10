@@ -59,13 +59,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
       <Head>
-        <title>Вход | КурьерПро PRO</title>
+        <title>Вход | Е.Д.С. Личный кабинет</title>
       </Head>
 
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            КурьерПро PRO
+            Е.Д.С. Личный кабинет
           </CardTitle>
           <CardDescription className="text-center">
             Войдите в свой аккаунт курьера
