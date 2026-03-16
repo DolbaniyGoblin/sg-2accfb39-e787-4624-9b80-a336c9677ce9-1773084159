@@ -78,8 +78,7 @@ const MOCK_TASKS: Task[] = [
     latitude: 55.7558,
     longitude: 37.6173,
     created_by: "mock-admin-id",
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date().toISOString()
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
   },
   {
     id: "mock-task-2",
@@ -95,8 +94,7 @@ const MOCK_TASKS: Task[] = [
     latitude: 55.7858,
     longitude: 37.6373,
     created_by: "mock-admin-id",
-    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date().toISOString()
+    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
   },
   {
     id: "mock-task-3",
@@ -112,8 +110,7 @@ const MOCK_TASKS: Task[] = [
     latitude: 55.7258,
     longitude: 37.5973,
     created_by: "mock-admin-id",
-    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    updated_at: new Date().toISOString()
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString()
   }
 ];
 
