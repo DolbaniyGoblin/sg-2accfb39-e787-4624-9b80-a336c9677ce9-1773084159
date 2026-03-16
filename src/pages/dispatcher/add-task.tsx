@@ -39,6 +39,10 @@ export default function AddTask() {
       status: "active",
       phone: "+7 (999) 111-22-33",
       rating: 4.8,
+      avatar_url: null,
+      experience_months: 12,
+      is_on_shift: false,
+      photo_url: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -50,6 +54,10 @@ export default function AddTask() {
       status: "active",
       phone: "+7 (999) 222-33-44",
       rating: 4.9,
+      avatar_url: null,
+      experience_months: 24,
+      is_on_shift: true,
+      photo_url: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -61,6 +69,10 @@ export default function AddTask() {
       status: "active",
       phone: "+7 (999) 333-44-55",
       rating: 4.7,
+      avatar_url: null,
+      experience_months: 6,
+      is_on_shift: false,
+      photo_url: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -74,9 +86,10 @@ export default function AddTask() {
       latitude: 55.751244,
       longitude: 37.618423,
       is_active: true,
-      contact_person: "Иванов И.И.",
+      contact_name: "Иванов И.И.",
       contact_phone: "+7 (495) 111-22-33",
-      working_hours: "9:00-18:00",
+      notes: "Вход со двора",
+      created_by: "system",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -87,9 +100,10 @@ export default function AddTask() {
       latitude: 55.769123,
       longitude: 37.638456,
       is_active: true,
-      contact_person: "Петрова М.А.",
+      contact_name: "Петрова М.А.",
       contact_phone: "+7 (495) 222-33-44",
-      working_hours: "10:00-19:00",
+      notes: "Оставить на охране",
+      created_by: "system",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -100,9 +114,10 @@ export default function AddTask() {
       latitude: 55.732456,
       longitude: 37.598789,
       is_active: true,
-      contact_person: "Сидоров А.В.",
+      contact_name: "Сидоров А.В.",
       contact_phone: "+7 (495) 333-44-55",
-      working_hours: "8:00-20:00",
+      notes: "",
+      created_by: "system",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
