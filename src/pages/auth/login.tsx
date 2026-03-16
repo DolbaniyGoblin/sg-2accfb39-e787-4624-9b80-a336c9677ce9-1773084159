@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -8,13 +8,68 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { authService } from "@/services/authService";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forceLogout, setForceLogout] = useState(false);
+
+  // Автоматически выходим из системы при загрузке страницы логина
+  useEffect(() => {
+    const handleAutoLogout = async () => {
+      console.log("🔐 LoginPage: Checking for existing session...");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        console.log("🔐 LoginPage: Found existing session, signing out...");
+        await supabase.auth.signOut();
+        
+        // Очищаем всё
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        console.log("🔐 LoginPage: Logout complete");
+        toast.info("Предыдущая сессия завершена", {
+          description: "Войдите заново",
+        });
+      }
+    };
+
+    handleAutoLogout();
+  }, []);
+
+  const handleForceLogout = async () => {
+    setForceLogout(true);
+    console.log("🔐 LoginPage: Force logout initiated");
+    
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Удаляем все cookies
+      document.cookie.split(";").forEach(c => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
+      toast.success("Выход выполнен", {
+        description: "Все сессии очищены. Войдите заново.",
+      });
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error("Force logout error:", error);
+      toast.error("Ошибка при выходе");
+    } finally {
+      setForceLogout(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +167,27 @@ export default function LoginPage() {
                 </>
               ) : (
                 "Войти"
+              )}
+            </Button>
+            
+            {/* Кнопка принудительного выхода */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleForceLogout}
+              disabled={forceLogout}
+            >
+              {forceLogout ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Выход...
+                </>
+              ) : (
+                <>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Очистить все сессии
+                </>
               )}
             </Button>
           </form>
