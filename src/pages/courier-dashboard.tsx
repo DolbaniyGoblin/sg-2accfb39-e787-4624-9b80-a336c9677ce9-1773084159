@@ -11,6 +11,7 @@ import Link from "next/link";
 import { CourierLeaderboard } from "@/components/analytics/CourierLeaderboard";
 import { StatsChart } from "@/components/analytics/StatsChart";
 import confetti from "@/lib/confetti";
+import { DeliveryPhotoModal } from "@/components/DeliveryPhotoModal";
 
 interface Stats {
   today: number;
@@ -82,35 +83,35 @@ export default function CourierDashboard() {
       const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
       const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      const { data: todayTasks } = await supabase
+      const { data: todayTasks } = await (supabase as any)
         .from("tasks")
         .select("*, boxes_count")
         .eq("courier_id", user.id)
         .eq("status", "delivered")
         .gte("completed_at", today.toISOString());
 
-      const { data: weekTasks } = await supabase
+      const { data: weekTasks } = await (supabase as any)
         .from("tasks")
         .select("*, boxes_count")
         .eq("courier_id", user.id)
         .eq("status", "delivered")
         .gte("completed_at", weekAgo.toISOString());
 
-      const { data: monthTasks } = await supabase
+      const { data: monthTasks } = await (supabase as any)
         .from("tasks")
         .select("*, boxes_count")
         .eq("courier_id", user.id)
         .eq("status", "delivered")
         .gte("completed_at", monthAgo.toISOString());
 
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from("profiles")
         .select("rating")
         .eq("id", user.id)
         .single();
 
-      const todayBoxes = todayTasks?.reduce((sum, t) => sum + (t.boxes_count || 0), 0) || 0;
-      const monthBoxes = monthTasks?.reduce((sum, t) => sum + (t.boxes_count || 0), 0) || 0;
+      const todayBoxes = todayTasks?.reduce((sum: number, t: any) => sum + (t.boxes_count || 0), 0) || 0;
+      const monthBoxes = monthTasks?.reduce((sum: number, t: any) => sum + (t.boxes_count || 0), 0) || 0;
 
       setStats({
         today: todayTasks?.length || 0,
@@ -131,13 +132,13 @@ export default function CourierDashboard() {
   const fetchAchievements = async () => {
     if (!user) return;
 
-    const { data: tasks } = await supabase
+    const { data: tasks } = await (supabase as any)
       .from("tasks")
       .select("id, status, completed_at")
       .eq("courier_id", user.id)
       .eq("status", "delivered");
 
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from("profiles")
       .select("rating, created_at")
       .eq("id", user.id)
@@ -146,7 +147,7 @@ export default function CourierDashboard() {
     const totalDeliveries = tasks?.length || 0;
     const rating = profile?.rating || 0;
 
-    const todayDeliveries = tasks?.filter(t => {
+    const todayDeliveries = tasks?.filter((t: any) => {
       const completedDate = new Date(t.completed_at || "");
       const today = new Date();
       return completedDate.toDateString() === today.toDateString();

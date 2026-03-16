@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DeliveryPhotoModal } from "@/components/DeliveryPhotoModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Package, MapPin, Clock, CheckCircle2, AlertCircle, Calendar } from "lucide-react";
@@ -33,6 +34,7 @@ export default function MyBoxes() {
   const [loading, setLoading] = useState(true);
   const [problemText, setProblemText] = useState("");
   const [selectedBox, setSelectedBox] = useState<MyBox | null>(null);
+  const [selectedBoxForPhoto, setSelectedBoxForPhoto] = useState<MyBox | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -94,24 +96,13 @@ export default function MyBoxes() {
     }
   };
 
-  const handleDelivered = async (boxId: string) => {
-    try {
-      const { error } = await supabase
-        .from('my_boxes')
-        .update({ 
-          status: 'delivered',
-          delivered_at: new Date().toISOString()
-        })
-        .eq('id', boxId);
+  const handleDelivered = async (box: MyBox) => {
+    setSelectedBoxForPhoto(box);
+  };
 
-      if (error) throw error;
-
-      toast.success("✅ Коробка доставлена!");
-      notificationService.playSound("success");
-      fetchBoxes();
-    } catch (error) {
-      toast.error("Ошибка обновления статуса");
-    }
+  const handlePhotoSuccess = () => {
+    fetchBoxes();
+    setSelectedBoxForPhoto(null);
   };
 
   const handleProblem = async () => {
@@ -207,15 +198,6 @@ export default function MyBoxes() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => handleDelivered(box.id)}
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Доставлено
-                      </Button>
-                      
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button 
@@ -269,6 +251,16 @@ export default function MyBoxes() {
           )}
         </div>
       </div>
+
+      {selectedBoxForPhoto && (
+        <DeliveryPhotoModal
+          isOpen={!!selectedBoxForPhoto}
+          onClose={() => setSelectedBoxForPhoto(null)}
+          taskId={selectedBoxForPhoto.task_id}
+          courierId={user?.id || ""}
+          onSuccess={handlePhotoSuccess}
+        />
+      )}
     </Layout>
   );
 }

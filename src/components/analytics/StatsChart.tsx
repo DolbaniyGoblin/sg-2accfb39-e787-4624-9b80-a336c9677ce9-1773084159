@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 
 interface Props {
-  courierId: string;
+  courierId?: string;
+  title?: string;
+  data?: any;
+  valueSuffix?: string;
 }
 
 interface DayStats {
@@ -11,15 +14,18 @@ interface DayStats {
   deliveries: number;
 }
 
-export function StatsChart({ courierId }: Props) {
+export function StatsChart({ courierId, title, data: propData, valueSuffix = " шт" }: Props) {
   const [data, setData] = useState<DayStats[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (courierId) {
+    if (propData) {
+      setData(propData);
+      setLoading(false);
+    } else if (courierId) {
       fetchWeekStats();
     }
-  }, [courierId]);
+  }, [courierId, propData]);
 
   const fetchWeekStats = async () => {
     try {
@@ -33,7 +39,7 @@ export function StatsChart({ courierId }: Props) {
         const endOfDay = new Date(startOfDay);
         endOfDay.setDate(endOfDay.getDate() + 1);
 
-        const { data: tasks } = await supabase
+        const { data: tasks } = await (supabase as any)
           .from("tasks")
           .select("id")
           .eq("courier_id", courierId)
@@ -59,12 +65,13 @@ export function StatsChart({ courierId }: Props) {
     return <div className="h-48 flex items-center justify-center">Загрузка...</div>;
   }
 
-  const maxDeliveries = Math.max(...data.map(d => d.deliveries), 1);
+  const maxDeliveries = Math.max(...data.map((d: any) => d.deliveries), 1);
 
   return (
     <div className="space-y-4">
+      {title && <h3 className="text-sm font-medium">{title}</h3>}
       <div className="flex items-end justify-between gap-2 h-48">
-        {data.map((day, index) => (
+        {data.map((day: any, index: number) => (
           <div key={index} className="flex-1 flex flex-col items-center gap-2">
             <div className="w-full flex items-end justify-center h-40">
               <div
@@ -74,8 +81,8 @@ export function StatsChart({ courierId }: Props) {
                   minHeight: day.deliveries > 0 ? "8px" : "0px",
                 }}
               >
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-popover text-popover-foreground px-2 py-1 rounded text-xs font-semibold whitespace-nowrap">
-                  {day.deliveries} шт
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-popover text-popover-foreground px-2 py-1 rounded text-xs font-semibold whitespace-nowrap z-10">
+                  {day.deliveries}{valueSuffix}
                 </div>
               </div>
             </div>

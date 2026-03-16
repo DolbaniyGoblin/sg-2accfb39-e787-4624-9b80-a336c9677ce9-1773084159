@@ -168,3 +168,7 @@ export const confettiEffects = {
     }());
   }
 };
+
+export default function triggerConfetti() {
+  confettiEffects.celebrate();
+}

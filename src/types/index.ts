@@ -25,6 +25,10 @@ export interface Task {
   scheduled_time: string;
   status: "pending" | "in_progress" | "on_location" | "delivered" | "problem";
   created_at: string;
+  completed_at?: string;
+  priority?: number;
+  photo_url?: string;
+  comment?: string;
 }
 
 export interface Delivery {

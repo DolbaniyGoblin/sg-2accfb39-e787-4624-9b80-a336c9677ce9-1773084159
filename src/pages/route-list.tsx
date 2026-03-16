@@ -11,6 +11,7 @@ import { MapPin, Phone, Navigation, Package, Clock, CheckCircle2, AlertCircle, C
 import { formatTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { notificationService } from "@/services/notificationService";
+import { DeliveryPhotoModal } from "@/components/DeliveryPhotoModal";
 import Link from "next/link";
 
 type TimeSlot = "morning" | "afternoon" | "evening";
@@ -26,6 +27,8 @@ export default function RouteList() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TimeSlot>("morning");
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -77,6 +80,16 @@ export default function RouteList() {
     } catch (error) {
       toast.error("Ошибка обновления статуса");
     }
+  };
+
+  const handleCompleteTask = (taskId: string) => {
+    setSelectedTaskId(taskId);
+    setShowPhotoModal(true);
+  };
+
+  const handlePhotoSuccess = () => {
+    fetchTasks();
+    setSelectedTaskId(null);
   };
 
   const copyAddress = (address: string) => {
@@ -189,7 +202,7 @@ export default function RouteList() {
                   <Button 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => handleStatusChange(task.id, "delivered")}
+                    onClick={() => handleCompleteTask(task.id)}
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2" />
                     Доставлено
@@ -269,6 +282,16 @@ export default function RouteList() {
           </Tabs>
         </div>
       </div>
+
+      {selectedTaskId && (
+        <DeliveryPhotoModal
+          isOpen={showPhotoModal}
+          onClose={() => setShowPhotoModal(false)}
+          taskId={selectedTaskId}
+          courierId={user?.id || ""}
+          onSuccess={handlePhotoSuccess}
+        />
+      )}
     </Layout>
   );
 }

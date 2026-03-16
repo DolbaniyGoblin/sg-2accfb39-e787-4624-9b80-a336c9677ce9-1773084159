@@ -16,6 +16,7 @@ import {
 import { taskService } from "@/services/taskService";
 import { locationService } from "@/services/locationService";
 import { routeService } from "@/services/routeService";
+import { DeliveryPhotoModal } from "@/components/DeliveryPhotoModal";
 import type { Task } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -92,6 +93,7 @@ export default function MapPage() {
   const [traceLine, setTraceLine] = useState<any>(null);
   const [showTrace, setShowTrace] = useState(true);
   const [etas, setEtas] = useState<Map<string, Date>>(new Map());
+  const [selectedTaskForPhoto, setSelectedTaskForPhoto] = useState<Task | null>(null);
 
   const nextTask = useMemo(() => {
     return orderedTasks.find(t => t.status !== "delivered");
@@ -329,6 +331,11 @@ export default function MapPage() {
     toast.success("🧭 Открываю навигацию в Яндекс.Картах");
   };
 
+  const handlePhotoSuccess = () => {
+    loadTasks();
+    setSelectedTaskForPhoto(null);
+  };
+
   return (
     <Layout title="Карта доставок">
       <div className="space-y-4 p-4 pb-24">
@@ -468,6 +475,16 @@ export default function MapPage() {
           <div id="map-container" className="w-full h-[500px] bg-muted" />
         </Card>
       </div>
+
+      {selectedTaskForPhoto && (
+        <DeliveryPhotoModal
+          isOpen={!!selectedTaskForPhoto}
+          onClose={() => setSelectedTaskForPhoto(null)}
+          taskId={selectedTaskForPhoto.id}
+          courierId={user?.id || ""}
+          onSuccess={handlePhotoSuccess}
+        />
+      )}
     </Layout>
   );
 }
