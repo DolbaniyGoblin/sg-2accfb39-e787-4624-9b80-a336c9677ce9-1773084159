@@ -147,41 +147,32 @@ export default function AdminPanel() {
 
     setCreating(true);
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // MOCK MODE: Эмулируем создание пользователя без реального Admin API
+      const mockUserId = `mock-user-${Date.now()}`;
+      
+      // Создаем локальный объект пользователя
+      const newUser: User = {
+        id: mockUserId,
         email: newUserEmail,
-        password: newUserPassword,
-        email_confirm: true,
-      });
+        full_name: newUserFullName,
+        role: newUserRole,
+        status: "active",
+        created_at: new Date().toISOString(),
+      };
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Не удалось создать пользователя");
+      // Добавляем в локальный список пользователей
+      setUsers(prev => [newUser, ...prev]);
+      
+      // Обновляем статистику
+      setStats(prev => ({
+        ...prev,
+        totalUsers: prev.totalUsers + 1,
+        activeCouriers: newUserRole === "courier" ? prev.activeCouriers + 1 : prev.activeCouriers,
+        dispatchers: newUserRole === "dispatcher" ? prev.dispatchers + 1 : prev.dispatchers,
+        admins: newUserRole === "admin" ? prev.admins + 1 : prev.admins,
+      }));
 
-      // Create user record
-      const { error: userError } = await supabase
-        .from("users")
-        .insert({
-          id: authData.user.id,
-          email: newUserEmail,
-          full_name: newUserFullName,
-          role: newUserRole,
-          status: "active",
-        });
-
-      if (userError) throw userError;
-
-      // Create profile record
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert({
-          id: authData.user.id,
-          email: newUserEmail,
-          full_name: newUserFullName,
-        });
-
-      if (profileError) throw profileError;
-
-      toast.success(`Пользователь ${newUserEmail} создан!`);
+      toast.success(`✅ Пользователь ${newUserEmail} создан (MOCK MODE)!`);
       
       // Reset form
       setNewUserEmail("");
@@ -189,9 +180,6 @@ export default function AdminPanel() {
       setNewUserFullName("");
       setNewUserRole("courier");
       setIsCreateDialogOpen(false);
-      
-      // Reload data
-      loadData();
     } catch (error: any) {
       console.error("Error creating user:", error);
       toast.error(error.message || "Ошибка создания пользователя");
@@ -202,15 +190,31 @@ export default function AdminPanel() {
 
   const changeUserRole = async (userId: string, newRole: "courier" | "dispatcher" | "admin") => {
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({ role: newRole })
-        .eq("id", userId);
+      // MOCK MODE: Обновляем локально без реального запроса к Supabase
+      const oldUser = users.find(u => u.id === userId);
+      if (!oldUser) return;
 
-      if (error) throw error;
-
-      toast.success("Роль успешно изменена");
+      // Обновляем локальный список
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      
+      // Обновляем статистику
+      setStats(prev => {
+        const newStats = { ...prev };
+        
+        // Уменьшаем старую роль
+        if (oldUser.role === "courier") newStats.activeCouriers -= 1;
+        if (oldUser.role === "dispatcher") newStats.dispatchers -= 1;
+        if (oldUser.role === "admin") newStats.admins -= 1;
+        
+        // Увеличиваем новую роль
+        if (newRole === "courier") newStats.activeCouriers += 1;
+        if (newRole === "dispatcher") newStats.dispatchers += 1;
+        if (newRole === "admin") newStats.admins += 1;
+        
+        return newStats;
+      });
+
+      toast.success("✅ Роль успешно изменена (MOCK MODE)");
     } catch (error) {
       console.error("Error changing role:", error);
       toast.error("Ошибка изменения роли");
@@ -221,15 +225,10 @@ export default function AdminPanel() {
     const newStatus = currentStatus === "active" ? "blocked" : "active";
     
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({ status: newStatus })
-        .eq("id", userId);
-
-      if (error) throw error;
-
-      toast.success(newStatus === "blocked" ? "Пользователь заблокирован" : "Пользователь разблокирован");
+      // MOCK MODE: Обновляем локально без реального запроса к Supabase
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus as any } : u));
+      
+      toast.success(newStatus === "blocked" ? "🚫 Пользователь заблокирован (MOCK MODE)" : "✅ Пользователь разблокирован (MOCK MODE)");
     } catch (error) {
       console.error("Error toggling status:", error);
       toast.error("Ошибка изменения статуса");
