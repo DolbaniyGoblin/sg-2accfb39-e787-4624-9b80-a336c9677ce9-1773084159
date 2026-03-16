@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { Task } from "@/types";
 import { taskService } from "@/services/taskService";
-import { MapPin, Phone, Navigation, Package, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { MapPin, Phone, Navigation, Package, Clock, CheckCircle2, AlertCircle, Copy } from "lucide-react";
 import { formatTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { notificationService } from "@/services/notificationService";
@@ -79,8 +79,24 @@ export default function RouteList() {
     }
   };
 
+  const copyAddress = (address: string) => {
+    navigator.clipboard.writeText(address);
+    toast.success("Адрес скопирован!");
+  };
+
   const openNavigation = (lat: number, lon: number) => {
     window.open(`yandexmaps://maps.yandex.ru/?pt=${lon},${lat}&z=12&l=map`, "_blank");
+  };
+
+  const getPriorityBadge = (priority: number) => {
+    const colors = {
+      1: "bg-red-500",
+      2: "bg-orange-500",
+      3: "bg-yellow-500",
+      4: "bg-blue-500",
+      5: "bg-green-500",
+    };
+    return colors[priority as keyof typeof colors] || "bg-gray-500";
   };
 
   const renderTaskCard = (task: Task) => {
@@ -99,15 +115,30 @@ export default function RouteList() {
                 {formatTime(task.scheduled_time)}
               </p>
             </div>
-            <Badge variant={isDelivered ? "default" : isInProgress ? "secondary" : "outline"}>
-              {isDelivered ? "Доставлено" : isInProgress ? "В работе" : "Ожидает"}
-            </Badge>
+            <div className="flex gap-2">
+              <Badge variant={isDelivered ? "default" : isInProgress ? "secondary" : "outline"}>
+                {isDelivered ? "Доставлено" : isInProgress ? "В работе" : "Ожидает"}
+              </Badge>
+              {task.priority && (
+                <Badge className={`${getPriorityBadge(task.priority)} text-white`}>
+                  P{task.priority}
+                </Badge>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2 mb-4">
             <div className="flex items-start gap-2 text-sm">
               <MapPin className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-              <span className="line-clamp-2">{task.address}</span>
+              <span className="line-clamp-2 flex-1">{task.address}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                onClick={() => copyAddress(task.address)}
+              >
+                <Copy className="w-3 h-3" />
+              </Button>
             </div>
             
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -116,10 +147,13 @@ export default function RouteList() {
                 {task.boxes_count} кор.
               </span>
               {task.client_phone && (
-                <span className="flex items-center gap-1">
+                <a 
+                  href={`tel:${task.client_phone}`}
+                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                >
                   <Phone className="w-4 h-4" />
                   {task.client_phone}
-                </span>
+                </a>
               )}
             </div>
           </div>
