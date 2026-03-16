@@ -1,112 +1,90 @@
-import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
 
-interface DataPoint {
-  label: string;
-  value: number;
+interface Props {
+  courierId: string;
 }
 
-interface StatsChartProps {
-  title: string;
-  data: DataPoint[];
-  type?: "bar" | "line";
-  color?: string;
-  valuePrefix?: string;
-  valueSuffix?: string;
+interface DayStats {
+  date: string;
+  deliveries: number;
 }
 
-export function StatsChart({
-  title,
-  data,
-  type = "bar",
-  color = "#eab308",
-  valuePrefix = "",
-  valueSuffix = "",
-}: StatsChartProps) {
-  const maxValue = useMemo(() => Math.max(...data.map((d) => d.value), 1), [data]);
-  const total = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
+export function StatsChart({ courierId }: Props) {
+  const [data, setData] = useState<DayStats[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (courierId) {
+      fetchWeekStats();
+    }
+  }, [courierId]);
+
+  const fetchWeekStats = async () => {
+    try {
+      const days = [];
+      const today = new Date();
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const endOfDay = new Date(startOfDay);
+        endOfDay.setDate(endOfDay.getDate() + 1);
+
+        const { data: tasks } = await supabase
+          .from("tasks")
+          .select("id")
+          .eq("courier_id", courierId)
+          .eq("status", "delivered")
+          .gte("completed_at", startOfDay.toISOString())
+          .lt("completed_at", endOfDay.toISOString());
+
+        days.push({
+          date: date.toLocaleDateString("ru", { weekday: "short" }),
+          deliveries: tasks?.length || 0,
+        });
+      }
+
+      setData(days);
+    } catch (error) {
+      console.error("Error fetching week stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="h-48 flex items-center justify-center">Загрузка...</div>;
+  }
+
+  const maxDeliveries = Math.max(...data.map(d => d.deliveries), 1);
 
   return (
-    <Card className="bg-gray-800/50 border-gray-700">
-      <CardHeader>
-        <CardTitle className="text-lg text-white">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {data.map((point, index) => {
-            const percentage = (point.value / maxValue) * 100;
-            const prevValue = index > 0 ? data[index - 1].value : point.value;
-            
-            return (
-              <div key={point.label} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">{point.label}</span>
-                  <span className="font-semibold text-white">
-                    {valuePrefix}{point.value}{valueSuffix}
-                  </span>
+    <div className="space-y-4">
+      <div className="flex items-end justify-between gap-2 h-48">
+        {data.map((day, index) => (
+          <div key={index} className="flex-1 flex flex-col items-center gap-2">
+            <div className="w-full flex items-end justify-center h-40">
+              <div
+                className="w-full bg-primary rounded-t-lg transition-all hover:bg-primary/80 cursor-pointer relative group"
+                style={{
+                  height: `${(day.deliveries / maxDeliveries) * 100}%`,
+                  minHeight: day.deliveries > 0 ? "8px" : "0px",
+                }}
+              >
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-popover text-popover-foreground px-2 py-1 rounded text-xs font-semibold whitespace-nowrap">
+                  {day.deliveries} шт
                 </div>
-                
-                {type === "bar" ? (
-                  <div className="h-8 bg-gray-700/30 rounded overflow-hidden">
-                    <div
-                      className="h-full rounded transition-all duration-500 flex items-center justify-end px-2"
-                      style={{
-                        width: `${percentage}%`,
-                        backgroundColor: color,
-                      }}
-                    >
-                      {percentage > 15 && (
-                        <span className="text-xs font-bold text-white">
-                          {point.value}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative h-8 flex items-end">
-                    {index > 0 && (
-                      <svg
-                        className="absolute inset-0 w-full h-full"
-                        style={{ zIndex: 1 }}
-                      >
-                        <line
-                          x1="0%"
-                          y1={`${100 - (prevValue / maxValue) * 100}%`}
-                          x2="100%"
-                          y2={`${100 - (point.value / maxValue) * 100}%`}
-                          stroke={color}
-                          strokeWidth="2"
-                        />
-                      </svg>
-                    )}
-                    <div
-                      className="absolute rounded-full"
-                      style={{
-                        width: "8px",
-                        height: "8px",
-                        backgroundColor: color,
-                        bottom: `${(point.value / maxValue) * 100}%`,
-                        left: "50%",
-                        transform: "translate(-50%, 50%)",
-                        zIndex: 2,
-                      }}
-                    />
-                  </div>
-                )}
               </div>
-            );
-          })}
-        </div>
-        
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Итого</span>
-            <p className="text-xl font-bold text-white">
-              {valuePrefix}{total}{valueSuffix}
-            </p>
+            </div>
+            <span className="text-xs text-muted-foreground font-medium">
+              {day.date}
+            </span>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+    </div>
   );
 }
