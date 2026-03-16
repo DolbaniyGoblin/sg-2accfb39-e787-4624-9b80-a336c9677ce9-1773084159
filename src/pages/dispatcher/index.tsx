@@ -3,69 +3,178 @@ import { Layout } from "@/components/ui/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { Plus, MapPin, Package, Users, Clock, Map } from "lucide-react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 type Task = Database["public"]["Tables"]["tasks"]["Row"];
 type DeliveryPoint = Database["public"]["Tables"]["delivery_points"]["Row"];
 
+// Mock data для тестирования
+const MOCK_COURIERS: User[] = [
+  {
+    id: "mock-courier-1",
+    email: "ivan@courier.com",
+    full_name: "Иван Петров",
+    role: "courier",
+    status: "active",
+    rating: 4.8,
+    total_deliveries: 150,
+    phone: "+7 (999) 123-45-67",
+    avatar_url: null,
+    is_on_shift: true,
+    experience_months: 12,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "mock-courier-2",
+    email: "maria@courier.com",
+    full_name: "Мария Сидорова",
+    role: "courier",
+    status: "active",
+    rating: 4.9,
+    total_deliveries: 200,
+    phone: "+7 (999) 234-56-78",
+    avatar_url: null,
+    is_on_shift: true,
+    experience_months: 24,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "mock-courier-3",
+    email: "alex@courier.com",
+    full_name: "Алексей Козлов",
+    role: "courier",
+    status: "inactive",
+    rating: 4.7,
+    total_deliveries: 80,
+    phone: "+7 (999) 345-67-89",
+    avatar_url: null,
+    is_on_shift: false,
+    experience_months: 6,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+const MOCK_TASKS: Task[] = [
+  {
+    id: "mock-task-1",
+    courier_id: "mock-courier-1",
+    delivery_point_id: "mock-point-1",
+    address: "ул. Ленина, 10",
+    box_count: 5,
+    status: "in_progress",
+    client_name: "Магазин 'Продукты'",
+    client_phone: "+7 (999) 111-11-11",
+    notes: "Позвонить за 10 минут",
+    scheduled_time: null,
+    completed_at: null,
+    photo_url: null,
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "mock-task-2",
+    courier_id: "mock-courier-2",
+    delivery_point_id: "mock-point-2",
+    address: "пр. Мира, 25",
+    box_count: 3,
+    status: "delivered",
+    client_name: "Кафе 'Уют'",
+    client_phone: "+7 (999) 222-22-22",
+    notes: null,
+    scheduled_time: null,
+    completed_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    photo_url: null,
+    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "mock-task-3",
+    courier_id: null,
+    delivery_point_id: "mock-point-3",
+    address: "ул. Южная, 5",
+    box_count: 8,
+    status: "pending",
+    client_name: "Ресторан 'Вкусно'",
+    client_phone: "+7 (999) 333-33-33",
+    notes: "Срочная доставка",
+    scheduled_time: null,
+    completed_at: null,
+    photo_url: null,
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+const MOCK_POINTS: DeliveryPoint[] = [
+  {
+    id: "mock-point-1",
+    name: "Точка 1 - Центр",
+    address: "ул. Ленина, 10",
+    latitude: 55.7558,
+    longitude: 37.6173,
+    contact_name: "Иван Иванов",
+    contact_phone: "+7 (999) 111-11-11",
+    is_active: true,
+    notes: "Вход со двора",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "mock-point-2",
+    name: "Точка 2 - Север",
+    address: "пр. Мира, 25",
+    latitude: 55.7858,
+    longitude: 37.6373,
+    contact_name: "Петр Петров",
+    contact_phone: "+7 (999) 222-22-22",
+    is_active: true,
+    notes: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "mock-point-3",
+    name: "Точка 3 - Юг",
+    address: "ул. Южная, 5",
+    latitude: 55.7258,
+    longitude: 37.5973,
+    contact_name: "Сергей Сергеев",
+    contact_phone: "+7 (999) 333-33-33",
+    is_active: true,
+    notes: "Домофон 123",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
 export default function DispatcherDashboard() {
   const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [couriers, setCouriers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [points, setPoints] = useState<DeliveryPoint[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
-    checkDispatcherAccess();
-    loadData();
+    // В мок-режиме просто загружаем тестовые данные
+    loadMockData();
   }, []);
 
-  const checkDispatcherAccess = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/auth/login");
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || (profile.role !== "dispatcher" && profile.role !== "admin")) {
-      toast.error("Доступ запрещён. Только для диспетчеров.");
-      router.push("/");
-      return;
-    }
-
-    setCurrentUser(profile);
-  };
-
-  const loadData = async () => {
-    try {
-      const [couriersRes, tasksRes, pointsRes] = await Promise.all([
-        supabase.from("users").select("*").eq("role", "courier"),
-        supabase.from("tasks").select("*").order("created_at", { ascending: false }),
-        supabase.from("delivery_points").select("*").order("created_at", { ascending: false })
-      ]);
-
-      if (couriersRes.data) setCouriers(couriersRes.data);
-      if (tasksRes.data) setTasks(tasksRes.data);
-      if (pointsRes.data) setPoints(pointsRes.data);
-    } catch (error) {
-      console.error("Error loading data:", error);
-      toast.error("Ошибка загрузки данных");
-    } finally {
-      setLoading(false);
-    }
+  const loadMockData = () => {
+    setCouriers(MOCK_COURIERS);
+    setTasks(MOCK_TASKS);
+    setPoints(MOCK_POINTS);
+    setLoading(false);
+    toast.info("MOCK MODE: Загружены тестовые данные");
   };
 
   const stats = {
@@ -74,7 +183,7 @@ export default function DispatcherDashboard() {
     totalTasks: tasks.length,
     pendingTasks: tasks.filter(t => t.status === "pending").length,
     inProgressTasks: tasks.filter(t => t.status === "in_progress").length,
-    completedTasks: tasks.filter(t => t.status === "completed").length,
+    completedTasks: tasks.filter(t => t.status === "delivered").length,
     totalPoints: points.length,
     activePoints: points.filter(p => p.is_active).length
   };
