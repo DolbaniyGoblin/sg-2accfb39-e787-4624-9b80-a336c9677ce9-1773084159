@@ -1,10 +1,10 @@
-// ВРЕМЕННО ОТКЛЮЧЕНО ДЛЯ ТЕСТИРОВАНИЯ ИНТЕРФЕЙСОВ
-// Авторизация будет включена позже
+// ВРЕМЕННО ПОЛНОСТЬЮ ОТКЛЮЧЕНО ДЛЯ ТЕСТИРОВАНИЯ
+// Все запросы проходят без проверки авторизации и ролей
 
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  console.log("🔓 Middleware: DISABLED - Allowing all requests");
+  console.log("🔓 Middleware: FULLY DISABLED - All requests allowed");
   return NextResponse.next();
 }
 

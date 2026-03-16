@@ -13,16 +13,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ВРЕМЕННЫЙ МОК-ПОЛЬЗОВАТЕЛЬ ДЛЯ ТЕСТИРОВАНИЯ БЕЗ АВТОРИЗАЦИИ
+// ВРЕМЕННЫЙ МОК-ПОЛЬЗОВАТЕЛЬ ДЛЯ ТЕСТИРОВАНИЯ (РОЛЬ: ADMIN)
+// Администратор имеет доступ ко всем страницам системы
 const MOCK_USER: User = {
-  id: "mock-user-id",
-  email: "courier@test.com",
-  full_name: "Тестовый Курьер",
-  role: "courier",
+  id: "mock-admin-id",
+  email: "admin@test.com",
+  full_name: "Тестовый Администратор",
+  role: "admin", // Изменили роль на admin для доступа ко всем страницам
   status: "active",
-  phone: "+7 999 123-45-67",
-  rating: 4.8,
-  experience_months: 12,
+  phone: "+7 999 000-00-00",
+  rating: 5.0,
+  experience_months: 24,
   is_on_shift: true,
   photo_url: null,
   created_at: new Date().toISOString()
@@ -32,8 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(MOCK_USER);
   const [loading, setLoading] = useState(false);
 
-  // ВРЕМЕННО: Всегда возвращаем мок-пользователя
+  // ВРЕМЕННО: Всегда возвращаем мок-пользователя с ролью admin
   useEffect(() => {
+    console.log("🔓 AuthProvider: Using MOCK ADMIN user for testing");
     setUser(MOCK_USER);
     setLoading(false);
   }, []);
