@@ -24,9 +24,10 @@ import {
 
 interface LayoutProps {
   children: ReactNode;
+  title?: string;
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, title }: LayoutProps) {
   const router = useRouter();
 
   // ВРЕМЕННЫЙ МОК-ПОЛЬЗОВАТЕЛЬ ДЛЯ ТЕСТИРОВАНИЯ
@@ -103,7 +104,7 @@ export function Layout({ children }: LayoutProps) {
             <Link href="/courier-dashboard" className="flex items-center gap-2">
               <Package className="h-6 w-6 text-primary" />
               <span className="font-bold text-lg hidden sm:inline-block">
-                Курьерская служба
+                {title || "Курьерская служба"}
               </span>
             </Link>
           </div>
