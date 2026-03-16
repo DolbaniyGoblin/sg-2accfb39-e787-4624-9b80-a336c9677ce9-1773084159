@@ -47,7 +47,10 @@ export default function LoginPage() {
     console.log("🔐 LoginPage: Force logout initiated");
     
     try {
-      await supabase.auth.signOut();
+      // КРИТИЧНО: используем scope: 'global' для удаления ВСЕХ сессий
+      await supabase.auth.signOut({ scope: 'global' });
+      
+      // Очищаем всё локальное
       localStorage.clear();
       sessionStorage.clear();
       
@@ -60,6 +63,7 @@ export default function LoginPage() {
         description: "Все сессии очищены. Войдите заново.",
       });
       
+      // Принудительная перезагрузка страницы
       setTimeout(() => {
         window.location.reload();
       }, 1000);
