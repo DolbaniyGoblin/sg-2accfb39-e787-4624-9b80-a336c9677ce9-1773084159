@@ -29,19 +29,96 @@ export default function AddTask() {
     notes: ""
   });
 
+  // Mock data для тестирования
+  const MOCK_COURIERS: User[] = [
+    {
+      id: "mock-courier-1",
+      email: "courier1@test.com",
+      full_name: "Иван Петров",
+      role: "courier",
+      status: "active",
+      phone: "+7 (999) 111-22-33",
+      rating: 4.8,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: "mock-courier-2",
+      email: "courier2@test.com",
+      full_name: "Мария Сидорова",
+      role: "courier",
+      status: "active",
+      phone: "+7 (999) 222-33-44",
+      rating: 4.9,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: "mock-courier-3",
+      email: "courier3@test.com",
+      full_name: "Алексей Козлов",
+      role: "courier",
+      status: "active",
+      phone: "+7 (999) 333-44-55",
+      rating: 4.7,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ];
+
+  const MOCK_POINTS: DeliveryPoint[] = [
+    {
+      id: "mock-point-1",
+      name: "Точка 1 - Центр",
+      address: "ул. Ленина, 10",
+      latitude: 55.751244,
+      longitude: 37.618423,
+      is_active: true,
+      contact_person: "Иванов И.И.",
+      contact_phone: "+7 (495) 111-22-33",
+      working_hours: "9:00-18:00",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: "mock-point-2",
+      name: "Точка 2 - Север",
+      address: "пр. Мира, 25",
+      latitude: 55.769123,
+      longitude: 37.638456,
+      is_active: true,
+      contact_person: "Петрова М.А.",
+      contact_phone: "+7 (495) 222-33-44",
+      working_hours: "10:00-19:00",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: "mock-point-3",
+      name: "Точка 3 - Юг",
+      address: "ул. Южная, 5",
+      latitude: 55.732456,
+      longitude: 37.598789,
+      is_active: true,
+      contact_person: "Сидоров А.В.",
+      contact_phone: "+7 (495) 333-44-55",
+      working_hours: "8:00-20:00",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ];
+
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
     try {
-      const [couriersRes, pointsRes] = await Promise.all([
-        supabase.from("users").select("*").eq("role", "courier").eq("status", "active"),
-        supabase.from("delivery_points").select("*").eq("is_active", true)
-      ]);
-
-      if (couriersRes.data) setCouriers(couriersRes.data);
-      if (pointsRes.data) setPoints(pointsRes.data);
+      // MOCK MODE: используем локальные данные вместо Supabase
+      console.log("Loading data in MOCK MODE");
+      setCouriers(MOCK_COURIERS);
+      setPoints(MOCK_POINTS);
+      toast.info("MOCK MODE: Загружены тестовые данные");
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Ошибка загрузки данных");
@@ -60,24 +137,19 @@ export default function AddTask() {
 
     try {
       const selectedPoint = points.find(p => p.id === formData.delivery_point_id);
+      const selectedCourier = couriers.find(c => c.id === formData.courier_id);
       
-      const { error } = await supabase.from("tasks").insert({
-        courier_id: formData.courier_id,
-        delivery_point_id: formData.delivery_point_id,
-        address: selectedPoint?.address || "",
-        latitude: selectedPoint?.latitude || 0,
-        longitude: selectedPoint?.longitude || 0,
-        box_count: formData.box_count,
-        client_name: formData.client_name,
-        client_phone: formData.client_phone,
-        delivery_time: formData.delivery_time,
-        notes: formData.notes,
-        status: "pending"
+      // MOCK MODE: эмулируем создание задания
+      console.log("Creating task in MOCK MODE:", {
+        courier: selectedCourier?.full_name,
+        point: selectedPoint?.name,
+        ...formData
       });
 
-      if (error) throw error;
+      // Имитируем задержку сети
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      toast.success("Задание успешно создано!");
+      toast.success("✅ MOCK MODE: Задание успешно создано!");
       router.push("/dispatcher");
     } catch (error) {
       console.error("Error creating task:", error);
