@@ -85,20 +85,19 @@ export async function middleware(request: NextRequest) {
   // Role-based access control for authenticated users
   if (session) {
     console.log("🔐 Middleware: Checking user role for protected routes");
-    const { data: user } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", session.user.id)
-      .single();
+    
+    // КРИТИЧНО: Берём роль из user_metadata, а не из таблицы users
+    const userRole = session.user.user_metadata?.role || "courier";
+    console.log("🔐 Middleware: User role from metadata:", userRole);
 
-    if (request.nextUrl.pathname.startsWith("/admin") && user?.role !== "admin") {
+    if (request.nextUrl.pathname.startsWith("/admin") && userRole !== "admin") {
       console.log("🔐 Middleware: Non-admin trying to access admin route");
       return NextResponse.redirect(new URL("/", request.url));
     }
 
     if (request.nextUrl.pathname.startsWith("/dispatcher") && 
-        user?.role !== "dispatcher" && 
-        user?.role !== "admin") {
+        userRole !== "dispatcher" && 
+        userRole !== "admin") {
       console.log("🔐 Middleware: Non-dispatcher trying to access dispatcher route");
       return NextResponse.redirect(new URL("/", request.url));
     }
